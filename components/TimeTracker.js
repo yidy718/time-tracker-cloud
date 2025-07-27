@@ -10,6 +10,8 @@ export default function TimeTracker({ session, employee }) {
   const [showPasswordChange, setShowPasswordChange] = useState(false)
   const [isOnBreak, setIsOnBreak] = useState(false)
   const [breakStartTime, setBreakStartTime] = useState(null)
+  const [showMenu, setShowMenu] = useState(false)
+  const [weeklyHours, setWeeklyHours] = useState('0:00')
 
   useEffect(() => {
     // Update current time every second
@@ -20,8 +22,20 @@ export default function TimeTracker({ session, employee }) {
     // Load initial data
     loadData()
 
-    return () => clearInterval(timer)
-  }, [])
+    // Close menu when clicking outside
+    const handleClickOutside = (event) => {
+      if (showMenu && !event.target.closest('.relative')) {
+        setShowMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showMenu])
 
   const loadData = async () => {
     try {
@@ -32,8 +46,61 @@ export default function TimeTracker({ session, employee }) {
       // Load locations
       const { data: locationsData } = await database.getLocations(employee.organization_id)
       setLocations(locationsData || [])
+
+      // Load weekly hours
+      await loadWeeklyHours()
     } catch (error) {
       console.error('Error loading data:', error)
+    }
+  }
+
+  const loadWeeklyHours = async () => {
+    try {
+      // Get Monday of current week
+      const now = new Date()
+      const dayOfWeek = now.getDay()
+      const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1) // Adjust for Sunday
+      const monday = new Date(now.setDate(diff))
+      monday.setHours(0, 0, 0, 0)
+      
+      const sunday = new Date(monday)
+      sunday.setDate(monday.getDate() + 6)
+      sunday.setHours(23, 59, 59, 999)
+
+      const { data: weeklyData } = await database.getWeeklyHours(
+        employee.organization_id,
+        monday.toISOString(),
+        sunday.toISOString(),
+        [employee.id]
+      )
+
+      if (weeklyData && weeklyData.length > 0) {
+        // Calculate total work hours for the week
+        const totalMinutes = weeklyData.reduce((total, session) => {
+          if (session.clock_out) {
+            const clockIn = new Date(session.clock_in)
+            const clockOut = new Date(session.clock_out)
+            const sessionMinutes = (clockOut - clockIn) / (1000 * 60)
+            
+            // Subtract break time if exists
+            let breakMinutes = 0
+            if (session.break_start && session.break_end) {
+              const breakStart = new Date(session.break_start)
+              const breakEnd = new Date(session.break_end)
+              breakMinutes = (breakEnd - breakStart) / (1000 * 60)
+            }
+            
+            return total + (sessionMinutes - breakMinutes)
+          }
+          return total
+        }, 0)
+
+        const hours = Math.floor(totalMinutes / 60)
+        const minutes = Math.floor(totalMinutes % 60)
+        setWeeklyHours(`${hours}:${minutes.toString().padStart(2, '0')}`)
+      }
+    } catch (error) {
+      console.error('Error loading weekly hours:', error)
     }
   }
 
@@ -50,6 +117,7 @@ export default function TimeTracker({ session, employee }) {
       
       setCurrentSession(data)
       alert('Clocked in successfully!')
+      await loadWeeklyHours() // Refresh weekly hours
     } catch (error) {
       console.error('Clock in error:', error)
       alert('Error clocking in. Please try again.')
@@ -60,13 +128,18 @@ export default function TimeTracker({ session, employee }) {
   const handleClockOut = async () => {
     if (!currentSession) return
 
-    // End break if currently on break
-    if (isOnBreak) {
-      await handleEndBreak()
-    }
-
     setLoading(true)
     try {
+      // End break if currently on break
+      if (isOnBreak && breakStartTime) {
+        const breakEnd = new Date()
+        await database.addBreakPeriod(
+          currentSession.id, 
+          breakStartTime.toISOString(), 
+          breakEnd.toISOString()
+        )
+      }
+
       const { data, error } = await database.clockOut(currentSession.id)
       if (error) throw error
       
@@ -74,6 +147,7 @@ export default function TimeTracker({ session, employee }) {
       setIsOnBreak(false)
       setBreakStartTime(null)
       alert('Clocked out successfully!')
+      await loadWeeklyHours() // Refresh weekly hours
     } catch (error) {
       console.error('Clock out error:', error)
       alert('Error clocking out. Please try again.')
@@ -81,30 +155,27 @@ export default function TimeTracker({ session, employee }) {
     setLoading(false)
   }
 
-  const handleStartBreak = async () => {
+  const handleStartBreak = () => {
     if (!currentSession || isOnBreak) return
 
-    setLoading(true)
-    try {
-      const { data, error } = await database.startBreak(currentSession.id)
-      if (error) throw error
-      
-      setIsOnBreak(true)
-      setBreakStartTime(new Date())
-      alert('Break started!')
-    } catch (error) {
-      console.error('Start break error:', error)
-      alert('Error starting break. Please try again.')
-    }
-    setLoading(false)
+    // Just track break state locally, no database call needed
+    setIsOnBreak(true)
+    setBreakStartTime(new Date())
+    alert('Break started!')
   }
 
   const handleEndBreak = async () => {
-    if (!currentSession || !isOnBreak) return
+    if (!currentSession || !isOnBreak || !breakStartTime) return
 
     setLoading(true)
     try {
-      const { data, error } = await database.endBreak(currentSession.id)
+      // Now save the completed break period to database
+      const breakEnd = new Date()
+      const { data, error } = await database.addBreakPeriod(
+        currentSession.id, 
+        breakStartTime.toISOString(), 
+        breakEnd.toISOString()
+      )
       if (error) throw error
       
       setIsOnBreak(false)
@@ -159,19 +230,33 @@ export default function TimeTracker({ session, employee }) {
           </div>
           <div className="text-right">
             <div className="text-3xl font-mono font-bold mb-2">{formatTime(currentTime)}</div>
-            <div className="space-x-4">
+            <div className="relative">
               <button
-                onClick={() => setShowPasswordChange(true)}
-                className="text-sm text-white/80 hover:text-white transition-colors px-3 py-1 rounded-lg hover:bg-white/10"
+                onClick={() => setShowMenu(!showMenu)}
+                className="text-sm text-white/80 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/10 flex items-center gap-2"
               >
-                🔑 Change Password
+                ⚙️ Menu
               </button>
-              <button
-                onClick={() => auth.signOut()}
-                className="text-sm text-white/80 hover:text-white transition-colors px-3 py-1 rounded-lg hover:bg-white/10"
-              >
-                🚪 Sign Out
-              </button>
+              
+              {showMenu && (
+                <div className="absolute right-0 top-12 bg-white rounded-2xl shadow-xl min-w-48 z-50 overflow-hidden">
+                  <button
+                    onClick={() => {
+                      setShowPasswordChange(true)
+                      setShowMenu(false)
+                    }}
+                    className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3"
+                  >
+                    🔑 Change Password
+                  </button>
+                  <button
+                    onClick={() => auth.signOut()}
+                    className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3 border-t border-gray-100"
+                  >
+                    🚪 Sign Out
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -181,11 +266,15 @@ export default function TimeTracker({ session, employee }) {
         {/* Employee Info */}
         <div className="card slide-in employee-info">
           <div className="employee-avatar">👤</div>
-          <div>
+          <div className="flex-1">
             <h2 className="text-2xl font-bold mb-1">
               {employee.first_name} {employee.last_name}
             </h2>
             <p className="text-white/80 text-lg">{employee.organization?.name}</p>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-white/80 mb-1">This Week</div>
+            <div className="text-2xl font-bold font-mono">{weeklyHours}</div>
           </div>
         </div>
 
