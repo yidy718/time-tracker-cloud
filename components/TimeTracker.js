@@ -151,136 +151,166 @@ export default function TimeTracker({ session, employee }) {
   return (
     <div className="container-app">
       {/* Header */}
-      <div className="bg-gradient-primary text-white p-6 rounded-b-3xl shadow-xl">
-        <div className="flex justify-between items-center mb-4">
+      <div className="app-header fade-in">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Time Tracker</h1>
-            <p className="text-white/80">{formatDate(currentTime)}</p>
+            <h1 className="text-3xl font-bold mb-2">⏰ Time Tracker</h1>
+            <p className="text-white/80 text-lg">{formatDate(currentTime)}</p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-mono">{formatTime(currentTime)}</div>
-            <div className="space-x-3 mt-1">
+            <div className="text-3xl font-mono font-bold mb-2">{formatTime(currentTime)}</div>
+            <div className="space-x-4">
               <button
                 onClick={() => setShowPasswordChange(true)}
-                className="text-sm text-white/80 hover:text-white"
+                className="text-sm text-white/80 hover:text-white transition-colors px-3 py-1 rounded-lg hover:bg-white/10"
               >
-                Change Password
+                🔑 Change Password
               </button>
               <button
                 onClick={() => auth.signOut()}
-                className="text-sm text-white/80 hover:text-white"
+                className="text-sm text-white/80 hover:text-white transition-colors px-3 py-1 rounded-lg hover:bg-white/10"
               >
-                Sign Out
+                🚪 Sign Out
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="flex-1 flex flex-col justify-center max-w-md mx-auto space-y-6">
         {/* Employee Info */}
-        <div className="card">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center text-white text-xl">
-              👤
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold">
-                {employee.first_name} {employee.last_name}
-              </h2>
-              <p className="text-gray-600">{employee.organization?.name}</p>
-            </div>
+        <div className="card slide-in employee-info">
+          <div className="employee-avatar">👤</div>
+          <div>
+            <h2 className="text-2xl font-bold mb-1">
+              {employee.first_name} {employee.last_name}
+            </h2>
+            <p className="text-white/80 text-lg">{employee.organization?.name}</p>
           </div>
         </div>
 
         {/* Current Status */}
-        <div className="card text-center">
-          <div className="mb-4">
+        <div className="card text-center fade-in">
+          <div className="mb-6">
             <span className={`status-badge ${
-              isOnBreak ? 'bg-yellow-100 text-yellow-800' : 
+              isOnBreak ? 'status-on-break' : 
               currentSession ? 'status-clocked-in' : 'status-clocked-out'
             }`}>
-              {isOnBreak ? 'On Break' : currentSession ? 'Clocked In' : 'Ready to Clock In'}
+              {isOnBreak ? '☕ On Break' : currentSession ? '✅ Clocked In' : '⏳ Ready to Clock In'}
             </span>
           </div>
-          <div className="time-display mb-4">
+          <div className="time-display">
             {currentSession ? getSessionDuration() : '00:00:00'}
           </div>
-          {currentSession && (
-            <div className="text-sm text-gray-600">
-              Started: {new Date(currentSession.clock_in).toLocaleString()}
+          {currentSession && !isOnBreak && (
+            <div className="text-white/80 text-lg mt-4">
+              Started: {new Date(currentSession.clock_in).toLocaleTimeString()}
+            </div>
+          )}
+          {isOnBreak && breakStartTime && (
+            <div className="text-white/80 text-lg mt-4">
+              Break started: {breakStartTime.toLocaleTimeString()}
             </div>
           )}
         </div>
 
         {/* Clock In/Out Actions */}
-        <div className="space-y-4">
-          {!currentSession ? (
-            // Clock In Section
-            <div className="card">
-              <h3 className="text-lg font-semibold mb-4">Clock In</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Location
-                  </label>
-                  <select
-                    value={selectedLocation}
-                    onChange={(e) => setSelectedLocation(e.target.value)}
-                    className="input"
-                    required
-                  >
-                    <option value="">Choose a location</option>
-                    {locations.map((location) => (
-                      <option key={location.id} value={location.id}>
-                        {location.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <button
-                  onClick={handleClockIn}
-                  disabled={loading || !selectedLocation}
-                  className="btn-success w-full"
+        {!currentSession ? (
+          // Clock In Section
+          <div className="card slide-in">
+            <h3 className="text-2xl font-bold mb-6 text-center">🚀 Ready to Start</h3>
+            <div className="space-y-6">
+              <div>
+                <label className="form-label">
+                  📍 Select Location
+                </label>
+                <select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  className="input"
+                  required
                 >
-                  {loading ? 'Clocking In...' : 'Clock In'}
-                </button>
+                  <option value="">Choose a location</option>
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
-          ) : (
-            // Clock Out Section
-            <div className="card">
-              <h3 className="text-lg font-semibold mb-4">Currently Working</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={isOnBreak ? handleEndBreak : handleStartBreak}
-                    disabled={loading}
-                    className={`${isOnBreak ? 'btn-success' : 'btn-secondary'} w-full`}
-                  >
-                    {loading ? 'Loading...' : isOnBreak ? 'End Break' : 'Start Break'}
-                  </button>
-                  <button
-                    onClick={handleClockOut}
-                    disabled={loading || isOnBreak}
-                    className="btn-danger w-full"
-                  >
-                    {loading ? 'Clocking Out...' : 'Clock Out'}
-                  </button>
-                </div>
-                {isOnBreak && (
-                  <div className="text-center text-sm text-yellow-600 font-medium">
-                    Break in progress - Clock out disabled
-                  </div>
+              <button
+                onClick={handleClockIn}
+                disabled={loading || !selectedLocation}
+                className="btn-success w-full text-xl py-4"
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Clocking In...
+                  </>
+                ) : (
+                  <>
+                    ⏰ Clock In
+                  </>
                 )}
-              </div>
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          // Clock Out Section
+          <div className="card slide-in">
+            <h3 className="text-2xl font-bold mb-6 text-center">
+              {isOnBreak ? '☕ Break Time' : '💼 Currently Working'}
+            </h3>
+            <div className="action-buttons two-col">
+              <button
+                onClick={isOnBreak ? handleEndBreak : handleStartBreak}
+                disabled={loading}
+                className={`${isOnBreak ? 'btn-success' : 'btn-warning'} text-lg py-4`}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Loading...
+                  </>
+                ) : isOnBreak ? (
+                  <>
+                    ✅ End Break
+                  </>
+                ) : (
+                  <>
+                    ☕ Start Break
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleClockOut}
+                disabled={loading || isOnBreak}
+                className="btn-danger text-lg py-4"
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Clocking Out...
+                  </>
+                ) : (
+                  <>
+                    🏁 Clock Out
+                  </>
+                )}
+              </button>
+            </div>
+            {isOnBreak && (
+              <div className="text-center text-white/80 mt-4 p-4 bg-amber-500/20 rounded-2xl border border-amber-400/30">
+                <p className="font-medium">⚠️ Finish your break before clocking out</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Footer */}
-        <div className="text-center text-sm text-gray-500 mt-8">
-          Made with ❤️ by yidy
+        <div className="text-center text-white/60 mt-8 mb-4">
+          <p className="text-lg">Made with ❤️ by yidy</p>
         </div>
       </div>
 
@@ -337,13 +367,13 @@ function PasswordChangeModal({ onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="card-glass max-w-md w-full">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold">Change Password</h3>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="card-glass max-w-md w-full fade-in">
+        <div className="flex justify-between items-center mb-8">
+          <h3 className="text-2xl font-bold">🔑 Change Password</h3>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-xl"
+            className="text-gray-500 hover:text-gray-700 text-2xl w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
           >
             ×
           </button>
@@ -356,21 +386,21 @@ function PasswordChangeModal({ onClose }) {
             <p className="text-sm text-gray-500 mt-2">This dialog will close automatically.</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded text-red-800 text-sm">
-                {error}
+              <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-sm font-medium">
+                ❌ {error}
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Current Password
+              <label className="form-label-admin">
+                🔒 Current Password
               </label>
               <input
                 type="password"
                 required
-                className="input"
+                className="input-admin"
                 value={formData.currentPassword}
                 onChange={(e) => setFormData({...formData, currentPassword: e.target.value})}
                 placeholder="Enter current password"
@@ -378,28 +408,28 @@ function PasswordChangeModal({ onClose }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                New Password
+              <label className="form-label-admin">
+                🆕 New Password
               </label>
               <input
                 type="password"
                 required
-                className="input"
+                className="input-admin"
                 value={formData.newPassword}
                 onChange={(e) => setFormData({...formData, newPassword: e.target.value})}
-                placeholder="Enter new password"
+                placeholder="Enter new password (min 6 characters)"
                 minLength="6"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm New Password
+              <label className="form-label-admin">
+                ✅ Confirm New Password
               </label>
               <input
                 type="password"
                 required
-                className="input"
+                className="input-admin"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                 placeholder="Confirm new password"
@@ -407,20 +437,27 @@ function PasswordChangeModal({ onClose }) {
               />
             </div>
 
-            <div className="flex space-x-3 pt-4">
+            <div className="grid grid-cols-2 gap-4 pt-4">
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-primary flex-1"
+                className="btn-primary"
               >
-                {loading ? 'Updating...' : 'Update Password'}
+                {loading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Updating...
+                  </>
+                ) : (
+                  '🔐 Update Password'
+                )}
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="btn-secondary flex-1"
+                className="btn-secondary"
               >
-                Cancel
+                ❌ Cancel
               </button>
             </div>
           </form>

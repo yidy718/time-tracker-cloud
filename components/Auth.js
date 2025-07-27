@@ -31,38 +31,39 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="card-glass max-w-md w-full">
-        <div className="text-center mb-8">
-          <div className="text-6xl mb-4 animate-pulse-slow">⏰</div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Time Tracker</h1>
-          <p className="text-gray-600">Cloud-based time tracking for teams</p>
-        </div>
+    <div className="container-app">
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="card-glass fade-in">
+          <div className="text-center mb-8">
+            <div className="text-8xl mb-6 animate-pulse">⏰</div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-3">Time Tracker Cloud</h1>
+            <p className="text-xl text-gray-600">Professional time tracking for modern teams</p>
+          </div>
 
         <form onSubmit={handleAuth} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+            <label className="form-label-admin">
+              📧 Email Address
             </label>
             <input
               type="email"
               required
-              className="input"
+              className="input-admin"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
+              placeholder="Enter your email address"
               autoComplete="email"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Password
+            <label className="form-label-admin">
+              🔐 Password
             </label>
             <input
               type="password"
               required
-              className="input"
+              className="input-admin"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
@@ -72,11 +73,12 @@ export default function Auth() {
           </div>
 
           {message && (
-            <div className={`p-4 rounded-lg text-sm ${
+            <div className={`p-4 rounded-2xl text-sm font-medium ${
               message.includes('Check your email') 
                 ? 'bg-green-50 text-green-800 border border-green-200' 
                 : 'bg-red-50 text-red-800 border border-red-200'
             }`}>
+              {message.includes('Check your email') ? '✅ ' : '❌ '}
               {message}
             </div>
           )}
@@ -84,12 +86,18 @@ export default function Auth() {
           <button
             type="submit"
             disabled={loading}
-            className="btn-primary w-full"
+            className="btn-primary w-full text-xl py-4"
           >
-            {loading 
-              ? (isSignUp ? 'Creating Account...' : 'Signing In...') 
-              : (isSignUp ? 'Create Account' : 'Sign In')
-            }
+            {loading ? (
+              <>
+                <span className="spinner"></span>
+                {isSignUp ? 'Creating Account...' : 'Signing In...'}
+              </>
+            ) : (
+              <>
+                {isSignUp ? '🚀 Create Account' : '🔑 Sign In'}
+              </>
+            )}
           </button>
         </form>
 
@@ -99,21 +107,30 @@ export default function Auth() {
           </p>
         </div>
 
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p className="mb-2">✨ Features included:</p>
-          <ul className="space-y-1">
-            <li>👥 Team time tracking</li>
-            <li>📊 Real-time dashboard</li>
-            <li>📈 Analytics & reports</li>
-            <li>🔐 Secure cloud storage</li>
-          </ul>
+        <div className="mt-8 text-center text-gray-500">
+          <p className="mb-4 text-lg font-semibold">✨ Features included:</p>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="flex items-center justify-center">
+              <span>👥 Team Tracking</span>
+            </div>
+            <div className="flex items-center justify-center">
+              <span>📊 Live Dashboard</span>
+            </div>
+            <div className="flex items-center justify-center">
+              <span>📈 Analytics</span>
+            </div>
+            <div className="flex items-center justify-center">
+              <span>🔐 Secure Cloud</span>
+            </div>
+          </div>
         </div>
 
         <footer className="mt-8 text-center">
-          <div className="text-sm text-gray-500">
-            Made with ❤️ by yidy
+          <div className="text-gray-500 text-lg">
+            Made with ❤️ by <span className="font-semibold">yidy</span>
           </div>
         </footer>
+        </div>
       </div>
     </div>
   )
