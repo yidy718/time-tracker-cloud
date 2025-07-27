@@ -14,6 +14,8 @@ export default function TimeTracker({ session, employee }) {
   const [showMenu, setShowMenu] = useState(false)
   const [showPasswordChange, setShowPasswordChange] = useState(false)
   const [totalHours, setTotalHours] = useState(0)
+  const [showWeeklyActivities, setShowWeeklyActivities] = useState(false)
+  const [weeklyActivities, setWeeklyActivities] = useState([])
 
   useEffect(() => {
     // Update current time every second
@@ -66,6 +68,7 @@ export default function TimeTracker({ session, employee }) {
         const totalMinutes = data.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0)
         const hours = (totalMinutes / 60).toFixed(1)
         setTotalHours(hours)
+        setWeeklyActivities(data)
       }
     } catch (error) {
       console.error('Error loading total hours:', error)
@@ -202,17 +205,20 @@ export default function TimeTracker({ session, employee }) {
                 </div>
               </div>
             </div>
-            <div className="relative">
-              <div className="text-right mb-4">
+            <div className="text-right space-y-4">
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="group relative w-10 h-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/20 hover:scale-105"
+                >
+                  <span className="text-lg transition-transform group-hover:rotate-90 duration-300">⚙️</span>
+                </button>
+              </div>
+              
+              <div>
                 <div className="text-white/80 text-sm mb-1">This Week</div>
                 <div className="text-2xl font-bold text-green-400">{totalHours}h</div>
               </div>
-              <button
-                onClick={() => setShowMenu(!showMenu)}
-                className="group relative w-12 h-12 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center transition-all duration-300 hover:bg-white/20 hover:scale-105"
-              >
-                <span className="text-xl transition-transform group-hover:rotate-90 duration-300">⚙️</span>
-              </button>
               
               {showMenu && (
                 <>
@@ -220,8 +226,18 @@ export default function TimeTracker({ session, employee }) {
                     className="fixed inset-0 z-[9999]" 
                     onClick={() => setShowMenu(false)}
                   />
-                  <div className="absolute right-0 top-16 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-[10000] transform transition-all duration-300 scale-100 opacity-100">
+                  <div className="absolute right-0 top-14 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-[10000] transform transition-all duration-300 scale-100 opacity-100">
                     <div className="p-4">
+                      <button
+                        onClick={() => {
+                          setShowWeeklyActivities(true)
+                          setShowMenu(false)
+                        }}
+                        className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <span className="text-lg">📊</span>
+                        <span className="font-medium text-gray-700">Weekly Activities</span>
+                      </button>
                       <button
                         onClick={() => {
                           setShowPasswordChange(true)
@@ -438,6 +454,15 @@ export default function TimeTracker({ session, employee }) {
           onClose={() => setShowPasswordChange(false)}
         />
       )}
+
+      {/* Weekly Activities Modal */}
+      {showWeeklyActivities && (
+        <WeeklyActivitiesModal 
+          activities={weeklyActivities}
+          employee={employee}
+          onClose={() => setShowWeeklyActivities(false)}
+        />
+      )}
     </div>
   )
 }
@@ -587,6 +612,123 @@ function PasswordChangeModal({ onClose }) {
             </div>
           </form>
         )}
+      </div>
+    </div>
+  )
+}
+
+function WeeklyActivitiesModal({ activities, employee, onClose }) {
+  const formatDuration = (minutes) => {
+    if (isNaN(minutes) || minutes < 0) {
+      return '0h 0m'
+    }
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return `${hours}h ${mins}m`
+  }
+
+  const getTotalHours = () => {
+    const totalMinutes = activities.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0)
+    return formatDuration(totalMinutes)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-4xl w-full max-h-[80vh] overflow-hidden shadow-2xl border border-white/20">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+              📊
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800">Weekly Activities</h3>
+              <p className="text-gray-600">{employee.first_name} {employee.last_name}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Summary */}
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-gray-600 text-sm">Total Entries</p>
+              <p className="text-2xl font-bold text-gray-800">{activities.length}</p>
+            </div>
+            <div>
+              <p className="text-gray-600 text-sm">Total Hours</p>
+              <p className="text-2xl font-bold text-blue-600">{getTotalHours()}</p>
+            </div>
+            <div>
+              <p className="text-gray-600 text-sm">Average per Day</p>
+              <p className="text-2xl font-bold text-purple-600">
+                {activities.length > 0 ? formatDuration(Math.round(activities.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0) / Math.max(activities.length, 1))) : '0h 0m'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Activities List */}
+        <div className="overflow-y-auto max-h-96">
+          {activities.length > 0 ? (
+            <div className="space-y-3">
+              {activities.map((activity, index) => (
+                <div 
+                  key={activity.id || index} 
+                  className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+                        {new Date(activity.clock_in).getDate()}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-800">
+                          {new Date(activity.clock_in).toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          📍 {activity.location_name || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono text-xl font-bold text-blue-600">
+                        {formatDuration(activity.duration_minutes || 0)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {new Date(activity.clock_in).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {activity.clock_out ? new Date(activity.clock_out).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'In Progress'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">📭</div>
+              <p className="text-gray-500 text-lg">No activities recorded this week</p>
+              <p className="text-gray-400 text-sm mt-2">Clock in to start tracking your time!</p>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={onClose}
+            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-6 rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   )
