@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { database, auth } from '../lib/supabase'
+import ReportsTab from './ReportsTab'
 
 export default function AdminDashboard({ session, employee }) {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -153,6 +154,7 @@ export default function AdminDashboard({ session, employee }) {
             { id: 'mytime', name: 'My Time' },
             { id: 'employees', name: 'Employees' },
             { id: 'locations', name: 'Locations' },
+            { id: 'reports', name: 'Reports' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -203,6 +205,13 @@ export default function AdminDashboard({ session, employee }) {
           <LocationsTab 
             locations={locations}
             onLocationsChange={loadData}
+            organizationId={employee.organization_id}
+          />
+        )}
+        
+        {activeTab === 'reports' && (
+          <ReportsTab 
+            employees={employees}
             organizationId={employee.organization_id}
           />
         )}

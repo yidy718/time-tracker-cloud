@@ -8,6 +8,8 @@ export default function TimeTracker({ session, employee }) {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [loading, setLoading] = useState(false)
   const [showPasswordChange, setShowPasswordChange] = useState(false)
+  const [isOnBreak, setIsOnBreak] = useState(false)
+  const [breakStartTime, setBreakStartTime] = useState(null)
 
   useEffect(() => {
     // Update current time every second
@@ -58,16 +60,59 @@ export default function TimeTracker({ session, employee }) {
   const handleClockOut = async () => {
     if (!currentSession) return
 
+    // End break if currently on break
+    if (isOnBreak) {
+      await handleEndBreak()
+    }
+
     setLoading(true)
     try {
       const { data, error } = await database.clockOut(currentSession.id)
       if (error) throw error
       
       setCurrentSession(null)
+      setIsOnBreak(false)
+      setBreakStartTime(null)
       alert('Clocked out successfully!')
     } catch (error) {
       console.error('Clock out error:', error)
       alert('Error clocking out. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  const handleStartBreak = async () => {
+    if (!currentSession || isOnBreak) return
+
+    setLoading(true)
+    try {
+      const { data, error } = await database.startBreak(currentSession.id)
+      if (error) throw error
+      
+      setIsOnBreak(true)
+      setBreakStartTime(new Date())
+      alert('Break started!')
+    } catch (error) {
+      console.error('Start break error:', error)
+      alert('Error starting break. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  const handleEndBreak = async () => {
+    if (!currentSession || !isOnBreak) return
+
+    setLoading(true)
+    try {
+      const { data, error } = await database.endBreak(currentSession.id)
+      if (error) throw error
+      
+      setIsOnBreak(false)
+      setBreakStartTime(null)
+      alert('Break ended!')
+    } catch (error) {
+      console.error('End break error:', error)
+      alert('Error ending break. Please try again.')
     }
     setLoading(false)
   }
@@ -152,14 +197,20 @@ export default function TimeTracker({ session, employee }) {
         <div className="card text-center">
           <div className="mb-4">
             <span className={`status-badge ${
+              isOnBreak ? 'bg-yellow-100 text-yellow-800' : 
               currentSession ? 'status-clocked-in' : 'status-clocked-out'
             }`}>
-              {currentSession ? 'Clocked In' : 'Ready to Clock In'}
+              {isOnBreak ? 'On Break' : currentSession ? 'Clocked In' : 'Ready to Clock In'}
             </span>
           </div>
           <div className="time-display mb-4">
             {currentSession ? getSessionDuration() : '00:00:00'}
           </div>
+          {currentSession && (
+            <div className="text-sm text-gray-600">
+              Started: {new Date(currentSession.clock_in).toLocaleString()}
+            </div>
+          )}
         </div>
 
         {/* Clock In/Out Actions */}
@@ -201,16 +252,27 @@ export default function TimeTracker({ session, employee }) {
             <div className="card">
               <h3 className="text-lg font-semibold mb-4">Currently Working</h3>
               <div className="space-y-4">
-                <div className="text-sm text-gray-600">
-                  Started: {new Date(currentSession.clock_in).toLocaleString()}
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={isOnBreak ? handleEndBreak : handleStartBreak}
+                    disabled={loading}
+                    className={`${isOnBreak ? 'btn-success' : 'btn-secondary'} w-full`}
+                  >
+                    {loading ? 'Loading...' : isOnBreak ? 'End Break' : 'Start Break'}
+                  </button>
+                  <button
+                    onClick={handleClockOut}
+                    disabled={loading || isOnBreak}
+                    className="btn-danger w-full"
+                  >
+                    {loading ? 'Clocking Out...' : 'Clock Out'}
+                  </button>
                 </div>
-                <button
-                  onClick={handleClockOut}
-                  disabled={loading}
-                  className="btn-danger w-full"
-                >
-                  {loading ? 'Clocking Out...' : 'Clock Out'}
-                </button>
+                {isOnBreak && (
+                  <div className="text-center text-sm text-yellow-600 font-medium">
+                    Break in progress - Clock out disabled
+                  </div>
+                )}
               </div>
             </div>
           )}
