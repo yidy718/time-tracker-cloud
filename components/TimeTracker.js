@@ -11,6 +11,9 @@ export default function TimeTracker({ session, employee }) {
   const [breakReason, setBreakReason] = useState('')
   const [isOnBreak, setIsOnBreak] = useState(false)
   const [breakStartTime, setBreakStartTime] = useState(null)
+  const [showMenu, setShowMenu] = useState(false)
+  const [showPasswordChange, setShowPasswordChange] = useState(false)
+  const [totalHours, setTotalHours] = useState(0)
 
   useEffect(() => {
     // Update current time every second
@@ -33,8 +36,39 @@ export default function TimeTracker({ session, employee }) {
       // Load locations
       const { data: locationsData } = await database.getLocations(employee.organization_id)
       setLocations(locationsData || [])
+
+      // Load total hours for current week
+      await loadTotalHours()
     } catch (error) {
       console.error('Error loading data:', error)
+    }
+  }
+
+  const loadTotalHours = async () => {
+    try {
+      const now = new Date()
+      const startOfWeek = new Date(now)
+      startOfWeek.setDate(now.getDate() - now.getDay())
+      startOfWeek.setHours(0, 0, 0, 0)
+      
+      const endOfWeek = new Date(startOfWeek)
+      endOfWeek.setDate(startOfWeek.getDate() + 6)
+      endOfWeek.setHours(23, 59, 59, 999)
+      
+      const { data } = await database.getTimeReport({
+        organization_id: employee.organization_id,
+        employee_id: employee.id,
+        start_date: startOfWeek.toISOString().split('T')[0],
+        end_date: endOfWeek.toISOString().split('T')[0]
+      })
+      
+      if (data) {
+        const totalMinutes = data.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0)
+        const hours = (totalMinutes / 60).toFixed(1)
+        setTotalHours(hours)
+      }
+    } catch (error) {
+      console.error('Error loading total hours:', error)
     }
   }
 
@@ -159,6 +193,7 @@ export default function TimeTracker({ session, employee }) {
                 <div>
                   <h1 className="text-4xl font-bold text-white mb-1">Time Tracker</h1>
                   <p className="text-white/80 text-lg">{formatDate(currentTime)}</p>
+                  <p className="text-white/60 text-sm">{formatTime(currentTime)}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -169,14 +204,47 @@ export default function TimeTracker({ session, employee }) {
                 <span className="px-2 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium">{employee.organization?.name}</span>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-3xl font-mono text-white mb-2">{formatTime(currentTime)}</div>
+            <div className="relative">
+              <div className="text-right mb-4">
+                <div className="text-white/80 text-sm mb-1">This Week</div>
+                <div className="text-2xl font-bold text-green-400">{totalHours}h</div>
+              </div>
               <button
-                onClick={() => auth.signOut()}
-                className="text-sm text-white/80 hover:text-white transition-colors"
+                onClick={() => setShowMenu(!showMenu)}
+                className="group relative w-12 h-12 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center transition-all duration-300 hover:bg-white/20 hover:scale-105"
               >
-                Sign Out
+                <span className="text-xl transition-transform group-hover:rotate-90 duration-300">⚙️</span>
               </button>
+              
+              {showMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-[9999]" 
+                    onClick={() => setShowMenu(false)}
+                  />
+                  <div className="absolute right-0 top-16 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-[10000] transform transition-all duration-300 scale-100 opacity-100">
+                    <div className="p-4">
+                      <button
+                        onClick={() => {
+                          setShowPasswordChange(true)
+                          setShowMenu(false)
+                        }}
+                        className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <span className="text-lg">🔑</span>
+                        <span className="font-medium text-gray-700">Change Password</span>
+                      </button>
+                      <button
+                        onClick={() => auth.signOut()}
+                        className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-50 transition-colors text-left mt-2"
+                      >
+                        <span className="text-lg">🚪</span>
+                        <span className="font-medium text-red-600">Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -365,6 +433,163 @@ export default function TimeTracker({ session, employee }) {
           </div>
         </div>
       )}
+
+      {/* Password Change Modal */}
+      {showPasswordChange && (
+        <PasswordChangeModal 
+          onClose={() => setShowPasswordChange(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+function PasswordChangeModal({ onClose }) {
+  const [formData, setFormData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      setError('New passwords do not match')
+      setLoading(false)
+      return
+    }
+
+    if (formData.newPassword.length < 6) {
+      setError('New password must be at least 6 characters')
+      setLoading(false)
+      return
+    }
+
+    try {
+      const { error } = await auth.updatePassword(formData.newPassword)
+      if (error) throw error
+
+      setSuccess(true)
+      setTimeout(() => {
+        onClose()
+      }, 2000)
+    } catch (error) {
+      console.error('Password update error:', error)
+      setError(error.message || 'Error updating password')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20 transform transition-all duration-300 scale-100 opacity-100">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+              🔑
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800">Change Password</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ×
+          </button>
+        </div>
+
+        {success ? (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white text-2xl mx-auto mb-4 shadow-lg">
+              ✓
+            </div>
+            <p className="text-green-600 font-medium text-lg">Password updated successfully!</p>
+            <p className="text-gray-500 mt-2">This dialog will close automatically.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-sm font-medium">
+                ❌ {error}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-3">
+                🔒 Current Password
+              </label>
+              <input
+                type="password"
+                required
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                value={formData.currentPassword}
+                onChange={(e) => setFormData({...formData, currentPassword: e.target.value})}
+                placeholder="Enter current password"
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-3">
+                🆕 New Password
+              </label>
+              <input
+                type="password"
+                required
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                value={formData.newPassword}
+                onChange={(e) => setFormData({...formData, newPassword: e.target.value})}
+                placeholder="Enter new password (min 6 characters)"
+                minLength="6"
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-3">
+                ✅ Confirm New Password
+              </label>
+              <input
+                type="password"
+                required
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                placeholder="Confirm new password"
+                minLength="6"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-6">
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-gradient-to-r from-purple-500 to-blue-600 text-white py-3 rounded-xl font-medium hover:from-purple-600 hover:to-blue-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Updating...</span>
+                  </span>
+                ) : (
+                  '🔐 Update Password'
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200 transition-all duration-300"
+              >
+                ❌ Cancel
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   )
 }
