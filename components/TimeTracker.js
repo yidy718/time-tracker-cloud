@@ -7,6 +7,7 @@ export default function TimeTracker({ session, employee }) {
   const [selectedLocation, setSelectedLocation] = useState('')
   const [currentTime, setCurrentTime] = useState(new Date())
   const [loading, setLoading] = useState(false)
+  const [showPasswordChange, setShowPasswordChange] = useState(false)
 
   useEffect(() => {
     // Update current time every second
@@ -113,12 +114,20 @@ export default function TimeTracker({ session, employee }) {
           </div>
           <div className="text-right">
             <div className="text-2xl font-mono">{formatTime(currentTime)}</div>
-            <button
-              onClick={() => auth.signOut()}
-              className="text-sm text-white/80 hover:text-white mt-1"
-            >
-              Sign Out
-            </button>
+            <div className="space-x-3 mt-1">
+              <button
+                onClick={() => setShowPasswordChange(true)}
+                className="text-sm text-white/80 hover:text-white"
+              >
+                Change Password
+              </button>
+              <button
+                onClick={() => auth.signOut()}
+                className="text-sm text-white/80 hover:text-white"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -211,6 +220,149 @@ export default function TimeTracker({ session, employee }) {
         <div className="text-center text-sm text-gray-500 mt-8">
           Made with ❤️ by yidy
         </div>
+      </div>
+
+      {/* Password Change Modal */}
+      {showPasswordChange && (
+        <PasswordChangeModal 
+          onClose={() => setShowPasswordChange(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+function PasswordChangeModal({ onClose }) {
+  const [formData, setFormData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      setError('New passwords do not match')
+      setLoading(false)
+      return
+    }
+
+    if (formData.newPassword.length < 6) {
+      setError('New password must be at least 6 characters')
+      setLoading(false)
+      return
+    }
+
+    try {
+      const { error } = await auth.updatePassword(formData.newPassword)
+      if (error) throw error
+
+      setSuccess(true)
+      setTimeout(() => {
+        onClose()
+      }, 2000)
+    } catch (error) {
+      console.error('Password update error:', error)
+      setError(error.message || 'Error updating password')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="card-glass max-w-md w-full">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-semibold">Change Password</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-xl"
+          >
+            ×
+          </button>
+        </div>
+
+        {success ? (
+          <div className="text-center py-8">
+            <div className="text-green-600 text-4xl mb-4">✓</div>
+            <p className="text-green-600 font-medium">Password updated successfully!</p>
+            <p className="text-sm text-gray-500 mt-2">This dialog will close automatically.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded text-red-800 text-sm">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Current Password
+              </label>
+              <input
+                type="password"
+                required
+                className="input"
+                value={formData.currentPassword}
+                onChange={(e) => setFormData({...formData, currentPassword: e.target.value})}
+                placeholder="Enter current password"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Password
+              </label>
+              <input
+                type="password"
+                required
+                className="input"
+                value={formData.newPassword}
+                onChange={(e) => setFormData({...formData, newPassword: e.target.value})}
+                placeholder="Enter new password"
+                minLength="6"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                required
+                className="input"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                placeholder="Confirm new password"
+                minLength="6"
+              />
+            </div>
+
+            <div className="flex space-x-3 pt-4">
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary flex-1"
+              >
+                {loading ? 'Updating...' : 'Update Password'}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-secondary flex-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   )
