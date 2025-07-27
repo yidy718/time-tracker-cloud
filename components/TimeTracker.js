@@ -186,22 +186,20 @@ export default function TimeTracker({ session, employee }) {
         <div className="relative px-6 py-8">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <span className="text-2xl">⏰</span>
-                </div>
-                <div>
-                  <h1 className="text-4xl font-bold text-white mb-1">Time Tracker</h1>
-                  <p className="text-white/80 text-lg">{formatDate(currentTime)}</p>
-                  <p className="text-white/60 text-sm">{formatTime(currentTime)}</p>
-                </div>
+              <div className="mb-4">
+                <p className="text-white text-2xl font-bold mb-1">{formatDate(currentTime)}</p>
+                <p className="text-white/70 text-lg">{formatTime(currentTime)}</p>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg">
                   {employee.first_name[0]}{employee.last_name[0]}
                 </div>
-                <span className="text-white/90 font-medium">{employee.first_name} {employee.last_name}</span>
-                <span className="px-2 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium">{employee.organization?.name}</span>
+                <div>
+                  <span className="text-white/90 font-semibold text-lg">{employee.first_name} {employee.last_name}</span>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <span className="px-3 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium">{employee.organization?.name}</span>
+                  </div>
+                </div>
               </div>
             </div>
             <div className="relative">
