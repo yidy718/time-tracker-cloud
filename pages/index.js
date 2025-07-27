@@ -3,6 +3,7 @@ import { supabase, auth, database } from '../lib/supabase'
 import Auth from '../components/Auth'
 import TimeTracker from '../components/TimeTracker'
 import AdminDashboard from '../components/AdminDashboard'
+import SuperAdminDashboard from '../components/SuperAdminDashboard'
 
 export default function Home({ session }) {
   const [employee, setEmployee] = useState(null)
@@ -52,8 +53,24 @@ export default function Home({ session }) {
     return <NewUserSetup session={session} onSetupComplete={fetchEmployee} />
   }
 
-  // Route based on user role
-  if (employee.role === 'admin' || employee.role === 'manager') {
+  // DEBUG: Log the employee data
+  console.log('🚀 ROUTING DEBUG - Employee object:', employee)
+  console.log('🚀 ROUTING DEBUG - Employee role:', employee.role)
+  console.log('🚀 ROUTING DEBUG - Employee ID:', employee.id)
+  console.log('🚀 ROUTING DEBUG - Organization:', employee.organization)
+
+  // Route based on user role and organization
+  if (employee.role === 'admin') {
+    // Check if this is the super admin (specific user ID or super admin org)
+    if (employee.id === '882247fb-71f2-4d1d-8cfd-f33d8c5a3b0f' || 
+        (employee.organization && employee.organization.name && 
+         employee.organization.name.toLowerCase().includes('super admin'))) {
+      return <SuperAdminDashboard session={session} employee={employee} />
+    }
+    return <AdminDashboard session={session} employee={employee} />
+  }
+  
+  if (employee.role === 'manager') {
     return <AdminDashboard session={session} employee={employee} />
   }
 

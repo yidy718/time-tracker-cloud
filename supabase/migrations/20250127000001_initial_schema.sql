@@ -1,18 +1,8 @@
--- Time Tracker Cloud Database Schema
--- To be used with Supabase PostgreSQL
+-- Initial Time Tracker Schema with Multi-Company Support
+-- This creates the complete database structure
 
+-- Enable Row Level Security
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Drop existing objects
-DROP VIEW IF EXISTS daily_summaries CASCADE;
-DROP VIEW IF EXISTS active_sessions CASCADE;
-DROP TABLE IF EXISTS time_sessions CASCADE;
-DROP TABLE IF EXISTS employees CASCADE;
-DROP TABLE IF EXISTS locations CASCADE;
-DROP TABLE IF EXISTS organizations CASCADE;
-DROP TYPE IF EXISTS employee_role CASCADE;
-DROP FUNCTION IF EXISTS calculate_session_durations() CASCADE;
-DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
 
 -- Employee roles enum
 CREATE TYPE employee_role AS ENUM ('admin', 'manager', 'employee');
@@ -31,6 +21,26 @@ CREATE TABLE locations (
     organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     address TEXT,
+    client_name VARCHAR(255),
+    project_code VARCHAR(50),
+    billing_rate DECIMAL(10,2),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Client Projects table
+CREATE TABLE client_projects (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    client_name VARCHAR(255) NOT NULL,
+    project_name VARCHAR(255) NOT NULL,
+    project_code VARCHAR(50),
+    start_date DATE,
+    end_date DATE,
+    billing_rate DECIMAL(10,2),
+    location_id UUID REFERENCES locations(id),
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -58,6 +68,7 @@ CREATE TABLE time_sessions (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
     location_id UUID REFERENCES locations(id),
+    client_project_id UUID REFERENCES client_projects(id),
     clock_in TIMESTAMP WITH TIME ZONE NOT NULL,
     clock_out TIMESTAMP WITH TIME ZONE,
     break_start TIMESTAMP WITH TIME ZONE,
@@ -96,12 +107,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger to auto-calculate durations
-CREATE TRIGGER calculate_durations_trigger
-    BEFORE INSERT OR UPDATE ON time_sessions
-    FOR EACH ROW
-    EXECUTE FUNCTION calculate_session_durations();
-
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -111,7 +116,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Add updated_at triggers to all tables
+-- Triggers
+CREATE TRIGGER calculate_durations_trigger
+    BEFORE INSERT OR UPDATE ON time_sessions
+    FOR EACH ROW
+    EXECUTE FUNCTION calculate_session_durations();
+
 CREATE TRIGGER update_organizations_updated_at
     BEFORE UPDATE ON organizations
     FOR EACH ROW
@@ -127,65 +137,10 @@ CREATE TRIGGER update_employees_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Row Level Security (RLS) Policies
-ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
-ALTER TABLE time_sessions ENABLE ROW LEVEL SECURITY;
-
--- Organizations policies
-CREATE POLICY "Users can view their organization" ON organizations
-    FOR SELECT USING (id IN (
-        SELECT organization_id FROM employees WHERE id = auth.uid()
-    ));
-
--- Locations policies  
-CREATE POLICY "Users can view organization locations" ON locations
-    FOR SELECT USING (organization_id IN (
-        SELECT organization_id FROM employees WHERE id = auth.uid()
-    ));
-
-CREATE POLICY "Admins can manage locations" ON locations
-    FOR ALL USING (organization_id IN (
-        SELECT organization_id FROM employees 
-        WHERE id = auth.uid() AND role IN ('admin', 'manager')
-    ));
-
--- Employees policies
-CREATE POLICY "Users can view organization employees" ON employees
-    FOR SELECT USING (organization_id IN (
-        SELECT organization_id FROM employees WHERE id = auth.uid()
-    ));
-
-CREATE POLICY "Users can update their own profile" ON employees
-    FOR UPDATE USING (id = auth.uid());
-
-CREATE POLICY "Admins can manage employees" ON employees
-    FOR ALL USING (organization_id IN (
-        SELECT organization_id FROM employees 
-        WHERE id = auth.uid() AND role IN ('admin', 'manager')
-    ));
-
--- Time sessions policies
-CREATE POLICY "Users can view organization time sessions" ON time_sessions
-    FOR SELECT USING (employee_id IN (
-        SELECT id FROM employees 
-        WHERE organization_id IN (
-            SELECT organization_id FROM employees WHERE id = auth.uid()
-        )
-    ));
-
-CREATE POLICY "Users can manage their own time sessions" ON time_sessions
-    FOR ALL USING (employee_id = auth.uid());
-
-CREATE POLICY "Admins can manage all time sessions" ON time_sessions
-    FOR ALL USING (employee_id IN (
-        SELECT id FROM employees 
-        WHERE organization_id IN (
-            SELECT organization_id FROM employees 
-            WHERE id = auth.uid() AND role IN ('admin', 'manager')
-        )
-    ));
+CREATE TRIGGER update_client_projects_updated_at
+    BEFORE UPDATE ON client_projects
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
 -- Useful Views
 CREATE VIEW active_sessions AS
@@ -211,10 +166,39 @@ FROM time_sessions
 WHERE clock_out IS NOT NULL
 GROUP BY DATE(clock_in AT TIME ZONE 'UTC'), employee_id;
 
--- Indexes for better performance
+CREATE VIEW detailed_time_reports AS
+SELECT 
+    ts.*,
+    e.first_name,
+    e.last_name,
+    e.employee_id as badge_number,
+    o.name as company_name,
+    l.name as location_name,
+    l.client_name,
+    cp.client_name as project_client,
+    cp.project_name,
+    cp.project_code,
+    cp.billing_rate as project_rate,
+    EXTRACT(EPOCH FROM (ts.clock_out - ts.clock_in))/3600 as hours_worked,
+    CASE 
+        WHEN cp.billing_rate IS NOT NULL THEN cp.billing_rate * EXTRACT(EPOCH FROM (ts.clock_out - ts.clock_in))/3600
+        WHEN e.hourly_rate IS NOT NULL THEN e.hourly_rate * EXTRACT(EPOCH FROM (ts.clock_out - ts.clock_in))/3600
+        ELSE 0
+    END as calculated_pay
+FROM time_sessions ts
+JOIN employees e ON ts.employee_id = e.id
+JOIN organizations o ON e.organization_id = o.id
+LEFT JOIN locations l ON ts.location_id = l.id
+LEFT JOIN client_projects cp ON ts.client_project_id = cp.id
+WHERE ts.clock_out IS NOT NULL;
+
+-- Indexes for performance
 CREATE INDEX idx_time_sessions_employee_id ON time_sessions(employee_id);
 CREATE INDEX idx_time_sessions_clock_in ON time_sessions(clock_in);
 CREATE INDEX idx_time_sessions_location_id ON time_sessions(location_id);
+CREATE INDEX idx_time_sessions_project ON time_sessions(client_project_id);
 CREATE INDEX idx_employees_organization_id ON employees(organization_id);
 CREATE INDEX idx_employees_role ON employees(role);
 CREATE INDEX idx_locations_organization_id ON locations(organization_id);
+CREATE INDEX idx_client_projects_organization ON client_projects(organization_id);
+CREATE INDEX idx_client_projects_active ON client_projects(is_active);
