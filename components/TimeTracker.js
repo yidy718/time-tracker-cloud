@@ -165,25 +165,39 @@ export default function TimeTracker({ session, employee }) {
   }
 
   const handleEndBreak = async () => {
-    if (!currentSession || !isOnBreak || !breakStartTime) return
+    if (!currentSession || !isOnBreak || !breakStartTime) {
+      console.log('End break validation failed:', { currentSession, isOnBreak, breakStartTime })
+      return
+    }
 
     setLoading(true)
     try {
       // Now save the completed break period to database
       const breakEnd = new Date()
+      console.log('Ending break:', {
+        sessionId: currentSession.id,
+        breakStart: breakStartTime.toISOString(),
+        breakEnd: breakEnd.toISOString()
+      })
+      
       const { data, error } = await database.addBreakPeriod(
         currentSession.id, 
         breakStartTime.toISOString(), 
         breakEnd.toISOString()
       )
-      if (error) throw error
       
+      if (error) {
+        console.error('Database error:', error)
+        throw error
+      }
+      
+      console.log('Break ended successfully:', data)
       setIsOnBreak(false)
       setBreakStartTime(null)
       alert('Break ended!')
     } catch (error) {
       console.error('End break error:', error)
-      alert('Error ending break. Please try again.')
+      alert(`Error ending break: ${error.message || 'Please try again.'}`)
     }
     setLoading(false)
   }
@@ -223,41 +237,46 @@ export default function TimeTracker({ session, employee }) {
     <div className="container-app">
       {/* Header */}
       <div className="app-header fade-in">
-        <div className="flex justify-between items-center">
-          <div>
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
             <h1 className="text-3xl font-bold mb-2">⏰ Time Tracker</h1>
-            <p className="text-white/80 text-lg">{formatDate(currentTime)}</p>
+            <p className="text-white/80 text-lg mb-2">{formatDate(currentTime)}</p>
+            <div className="text-2xl font-mono font-bold">{formatTime(currentTime)}</div>
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-mono font-bold mb-2">{formatTime(currentTime)}</div>
-            <div className="relative">
-              <button
-                onClick={() => setShowMenu(!showMenu)}
-                className="text-sm text-white/80 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/10 flex items-center gap-2"
-              >
-                ⚙️ Menu
-              </button>
-              
-              {showMenu && (
-                <div className="absolute right-0 top-12 bg-white rounded-2xl shadow-xl min-w-48 z-50 overflow-hidden">
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="text-white/80 hover:text-white transition-colors p-3 rounded-full hover:bg-white/10 flex items-center justify-center"
+              style={{ minWidth: '48px', minHeight: '48px' }}
+            >
+              ⚙️
+            </button>
+            
+            {showMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-[9999]" 
+                  onClick={() => setShowMenu(false)}
+                />
+                <div className="menu-dropdown">
                   <button
                     onClick={() => {
                       setShowPasswordChange(true)
                       setShowMenu(false)
                     }}
-                    className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3"
+                    className="menu-item"
                   >
                     🔑 Change Password
                   </button>
                   <button
                     onClick={() => auth.signOut()}
-                    className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3 border-t border-gray-100"
+                    className="menu-item border-t border-gray-100"
                   >
                     🚪 Sign Out
                   </button>
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>

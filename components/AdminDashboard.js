@@ -7,16 +7,12 @@ export default function AdminDashboard({ session, employee }) {
   const [employees, setEmployees] = useState([])
   const [locations, setLocations] = useState([])
   const [activeSessions, setActiveSessions] = useState([])
-  const [currentSession, setCurrentSession] = useState(null)
-  const [selectedLocation, setSelectedLocation] = useState('')
   const [loading, setLoading] = useState(true)
-  const [actionLoading, setActionLoading] = useState(false)
   const [showPasswordChange, setShowPasswordChange] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
 
   useEffect(() => {
     loadData()
-    // Check if admin has an active session
-    loadCurrentSession()
   }, [])
 
   const loadData = async () => {
@@ -36,160 +32,121 @@ export default function AdminDashboard({ session, employee }) {
     setLoading(false)
   }
 
-  const loadCurrentSession = async () => {
-    try {
-      const { data } = await database.getCurrentSession(employee.id)
-      setCurrentSession(data)
-    } catch (error) {
-      console.error('Error loading current session:', error)
-    }
-  }
-
-  const handleClockIn = async () => {
-    if (!selectedLocation) {
-      alert('Please select a location')
-      return
-    }
-
-    setActionLoading(true)
-    try {
-      const { data, error } = await database.clockIn(employee.id, selectedLocation)
-      if (error) throw error
-      
-      setCurrentSession(data)
-      loadData() // Refresh active sessions
-      alert('Clocked in successfully!')
-    } catch (error) {
-      console.error('Clock in error:', error)
-      alert('Error clocking in. Please try again.')
-    }
-    setActionLoading(false)
-  }
-
-  const handleClockOut = async () => {
-    if (!currentSession) return
-
-    setActionLoading(true)
-    try {
-      const { data, error } = await database.clockOut(currentSession.id)
-      if (error) throw error
-      
-      setCurrentSession(null)
-      loadData() // Refresh active sessions
-      alert('Clocked out successfully!')
-    } catch (error) {
-      console.error('Clock out error:', error)
-      alert('Error clocking out. Please try again.')
-    }
-    setActionLoading(false)
-  }
-
-  const getSessionDuration = () => {
-    if (!currentSession) return '00:00:00'
-    
-    const start = new Date(currentSession.clock_in)
-    const now = new Date()
-    const diff = now - start
-    
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-    
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-  }
-
-  // Update timer every second
-  useEffect(() => {
-    if (currentSession) {
-      const timer = setInterval(() => {
-        // This will trigger re-render to update the timer
-        setCurrentSession(prev => ({ ...prev }))
-      }, 1000)
-      return () => clearInterval(timer)
-    }
-  }, [currentSession])
-
   if (loading) {
     return (
-      <div className="container-app flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-          <p>Loading dashboard...</p>
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-6"></div>
+            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-purple-400 rounded-full animate-spin mx-auto" style={{ animationDelay: '0.5s' }}></div>
+          </div>
+          <p className="text-white/80 text-lg font-medium">Loading your dashboard...</p>
+          <p className="text-white/60 text-sm mt-2">Preparing everything for you</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="container-app">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
-      <div className="bg-gradient-primary text-white p-6 rounded-b-3xl shadow-xl">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-            <p className="text-white/80">{employee.organization?.name}</p>
-          </div>
-          <div className="space-x-3">
-            <button
-              onClick={() => setShowPasswordChange(true)}
-              className="text-sm text-white/80 hover:text-white"
-            >
-              Change Password
-            </button>
-            <button
-              onClick={() => auth.signOut()}
-              className="text-sm text-white/80 hover:text-white"
-            >
-              Sign Out
-            </button>
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-blue-600/20"></div>
+        <div className="relative px-6 py-8">
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <span className="text-2xl">⚙️</span>
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold text-white mb-1">Admin Dashboard</h1>
+                  <p className="text-white/80 text-lg">{employee.organization?.name}</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  {employee.first_name[0]}{employee.last_name[0]}
+                </div>
+                <span className="text-white/90 font-medium">{employee.first_name} {employee.last_name}</span>
+                <span className="px-2 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium">Admin</span>
+              </div>
+            </div>
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="group relative w-12 h-12 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center transition-all duration-300 hover:bg-white/20 hover:scale-105"
+              >
+                <span className="text-xl transition-transform group-hover:rotate-90 duration-300">⚙️</span>
+              </button>
+              
+              {showMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-[9999]" 
+                    onClick={() => setShowMenu(false)}
+                  />
+                  <div className="absolute right-0 top-16 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-[10000] transform transition-all duration-300 scale-100 opacity-100">
+                    <div className="p-4">
+                      <button
+                        onClick={() => {
+                          setShowPasswordChange(true)
+                          setShowMenu(false)
+                        }}
+                        className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <span className="text-lg">🔑</span>
+                        <span className="font-medium text-gray-700">Change Password</span>
+                      </button>
+                      <button
+                        onClick={() => auth.signOut()}
+                        className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-50 transition-colors text-left mt-2"
+                      >
+                        <span className="text-lg">🚪</span>
+                        <span className="font-medium text-red-600">Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 px-6">
-        <div className="flex space-x-8">
-          {[
-            { id: 'dashboard', name: 'Dashboard' },
-            { id: 'mytime', name: 'My Time' },
-            { id: 'employees', name: 'Employees' },
-            { id: 'locations', name: 'Locations' },
-            { id: 'reports', name: 'Reports' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-2 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              {tab.name}
-            </button>
-          ))}
+      {/* Navigation */}
+      <div className="px-6 pb-6">
+        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-2 border border-white/20">
+          <div className="flex space-x-2 overflow-x-auto">
+            {[
+              { id: 'dashboard', name: 'Dashboard', emoji: '📊', color: 'from-blue-500 to-purple-600' },
+              { id: 'employees', name: 'Employees', emoji: '👥', color: 'from-green-500 to-blue-600' },
+              { id: 'locations', name: 'Locations', emoji: '📍', color: 'from-orange-500 to-red-600' },
+              { id: 'reports', name: 'Reports', emoji: '📈', color: 'from-purple-500 to-pink-600' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? `bg-gradient-to-r ${tab.color} text-white shadow-lg transform scale-105`
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                <span className="text-lg">{tab.emoji}</span>
+                <span>{tab.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="px-6 pb-8">
         {activeTab === 'dashboard' && (
           <DashboardTab 
             activeSessions={activeSessions}
             employees={employees}
             locations={locations}
-          />
-        )}
-
-        {activeTab === 'mytime' && (
-          <MyTimeTab 
-            currentSession={currentSession}
-            locations={locations}
-            selectedLocation={selectedLocation}
-            setSelectedLocation={setSelectedLocation}
-            handleClockIn={handleClockIn}
-            handleClockOut={handleClockOut}
-            actionLoading={actionLoading}
-            getSessionDuration={getSessionDuration}
           />
         )}
         
@@ -218,7 +175,7 @@ export default function AdminDashboard({ session, employee }) {
       </div>
 
       {/* Footer */}
-      <div className="text-center text-sm text-gray-500 mt-8 pb-6">
+      <div className="text-center text-white/60 text-sm pb-6">
         Made with ❤️ by yidy
       </div>
 
@@ -232,89 +189,6 @@ export default function AdminDashboard({ session, employee }) {
   )
 }
 
-// NEW: My Time Tab for Admin Time Tracking
-function MyTimeTab({ 
-  currentSession, 
-  locations, 
-  selectedLocation, 
-  setSelectedLocation, 
-  handleClockIn, 
-  handleClockOut, 
-  actionLoading, 
-  getSessionDuration 
-}) {
-  return (
-    <div className="space-y-6">
-      <h3 className="text-lg font-semibold">My Time Tracking</h3>
-      
-      {/* Current Status */}
-      <div className="card text-center">
-        <div className="mb-4">
-          <span className={`status-badge ${
-            currentSession ? 'status-clocked-in' : 'status-clocked-out'
-          }`}>
-            {currentSession ? 'Clocked In' : 'Ready to Clock In'}
-          </span>
-        </div>
-        <div className="time-display mb-4">
-          {currentSession ? getSessionDuration() : '00:00:00'}
-        </div>
-        {currentSession && (
-          <div className="text-sm text-gray-600">
-            Started: {new Date(currentSession.clock_in).toLocaleString()}
-          </div>
-        )}
-      </div>
-
-      {/* Clock In/Out Actions */}
-      {!currentSession ? (
-        <div className="card">
-          <h4 className="text-lg font-semibold mb-4">Clock In</h4>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Location
-              </label>
-              <select
-                value={selectedLocation}
-                onChange={(e) => setSelectedLocation(e.target.value)}
-                className="input"
-                required
-              >
-                <option value="">Choose a location</option>
-                {locations.map((location) => (
-                  <option key={location.id} value={location.id}>
-                    {location.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              onClick={handleClockIn}
-              disabled={actionLoading || !selectedLocation}
-              className="btn-success w-full"
-            >
-              {actionLoading ? 'Clocking In...' : 'Clock In'}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="card">
-          <h4 className="text-lg font-semibold mb-4">Currently Working</h4>
-          <div className="space-y-4">
-            <button
-              onClick={handleClockOut}
-              disabled={actionLoading}
-              className="btn-danger w-full"
-            >
-              {actionLoading ? 'Clocking Out...' : 'Clock Out'}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 function DashboardTab({ activeSessions, employees, locations }) {
   const formatDuration = (startTime) => {
@@ -331,66 +205,90 @@ function DashboardTab({ activeSessions, employees, locations }) {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="group relative overflow-hidden bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/20 to-blue-500/20 rounded-full -translate-y-16 translate-x-16"></div>
+          <div className="relative flex items-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl flex items-center justify-center text-white text-2xl mr-4 shadow-lg">
               👥
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Active Now</p>
-              <p className="text-2xl font-bold">{activeSessions.length}</p>
+              <p className="text-white/60 text-sm font-medium uppercase tracking-wide">Active Now</p>
+              <p className="text-4xl font-bold text-white">{activeSessions.length}</p>
             </div>
           </div>
         </div>
         
-        <div className="card">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+        <div className="group relative overflow-hidden bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-purple-500/20 rounded-full -translate-y-16 translate-x-16"></div>
+          <div className="relative flex items-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-2xl flex items-center justify-center text-white text-2xl mr-4 shadow-lg">
               👤
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Employees</p>
-              <p className="text-2xl font-bold">{employees.length}</p>
+              <p className="text-white/60 text-sm font-medium uppercase tracking-wide">Total Employees</p>
+              <p className="text-4xl font-bold text-white">{employees.length}</p>
             </div>
           </div>
         </div>
         
-        <div className="card">
-          <div className="flex items-center">
-            <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+        <div className="group relative overflow-hidden bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400/20 to-pink-500/20 rounded-full -translate-y-16 translate-x-16"></div>
+          <div className="relative flex items-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center text-white text-2xl mr-4 shadow-lg">
               🏢
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Locations</p>
-              <p className="text-2xl font-bold">{locations.length}</p>
+              <p className="text-white/60 text-sm font-medium uppercase tracking-wide">Locations</p>
+              <p className="text-4xl font-bold text-white">{locations.length}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Active Sessions */}
-      <div className="card">
-        <h3 className="text-lg font-semibold mb-4">Currently Clocked In</h3>
+      <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
+        <div className="flex items-center space-x-3 mb-8">
+          <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+            ⏰
+          </div>
+          <h3 className="text-2xl font-bold text-white">Currently Clocked In</h3>
+        </div>
+        
         {activeSessions.length > 0 ? (
-          <div className="space-y-3">
-            {activeSessions.map((session) => (
-              <div key={session.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium">{session.first_name} {session.last_name}</p>
-                  <p className="text-sm text-gray-600">{session.location_name}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-mono text-sm">{formatDuration(session.clock_in)}</p>
-                  <p className="text-xs text-gray-500">
-                    Since {new Date(session.clock_in).toLocaleTimeString()}
-                  </p>
+          <div className="space-y-4">
+            {activeSessions.map((session, index) => (
+              <div 
+                key={session.id} 
+                className="group bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-[1.02]"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                      {session.first_name[0]}{session.last_name[0]}
+                    </div>
+                    <div>
+                      <p className="font-bold text-xl text-white">{session.first_name} {session.last_name}</p>
+                      <p className="text-white/70 text-sm">📍 {session.location_name}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono text-2xl font-bold text-green-400">{formatDuration(session.clock_in)}</p>
+                    <p className="text-white/60 text-sm">
+                      Since {new Date(session.clock_in).toLocaleTimeString()}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-8">No one is currently clocked in</p>
+          <div className="text-center py-16">
+            <div className="text-8xl mb-6 animate-pulse">😴</div>
+            <p className="text-white/80 text-xl font-medium mb-2">No one is currently clocked in</p>
+            <p className="text-white/60">Everyone is taking a break!</p>
+          </div>
         )}
       </div>
     </div>
@@ -402,35 +300,62 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Employees</h3>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="btn-primary"
-        >
-          Add Employee
-        </button>
-      </div>
+      <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+              👥
+            </div>
+            <h3 className="text-2xl font-bold text-white">Team Members</h3>
+          </div>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="group bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-300 hover:scale-105 shadow-lg"
+          >
+            <span className="flex items-center space-x-2">
+              <span>➕</span>
+              <span>Add Employee</span>
+            </span>
+          </button>
+        </div>
 
-      <div className="card">
         {employees.length > 0 ? (
-          <div className="space-y-3">
-            {employees.map((emp) => (
-              <div key={emp.id} className="flex items-center justify-between p-3 border-b border-gray-100 last:border-b-0">
-                <div>
-                  <p className="font-medium">{emp.first_name} {emp.last_name}</p>
-                  <p className="text-sm text-gray-600">{emp.email}</p>
+          <div className="space-y-4">
+            {employees.map((emp, index) => (
+              <div 
+                key={emp.id} 
+                className="group bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-[1.02]"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                      {emp.first_name[0]}{emp.last_name[0]}
+                    </div>
+                    <div>
+                      <p className="font-bold text-xl text-white">{emp.first_name} {emp.last_name}</p>
+                      <p className="text-white/70 text-sm">📧 {emp.email}</p>
+                    </div>
+                  </div>
+                  <span className={`px-4 py-2 rounded-xl text-sm font-bold ${
+                    emp.role === 'admin' 
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white' 
+                      : emp.role === 'manager'
+                      ? 'bg-gradient-to-r from-yellow-500 to-orange-600 text-white'
+                      : 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white'
+                  }`}>
+                    {emp.role.toUpperCase()}
+                  </span>
                 </div>
-                <span className={`status-badge ${
-                  emp.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                }`}>
-                  {emp.role}
-                </span>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-8">No employees added yet</p>
+          <div className="text-center py-16">
+            <div className="text-8xl mb-6">👥</div>
+            <p className="text-white/80 text-xl font-medium mb-2">No employees added yet</p>
+            <p className="text-white/60">Click "Add Employee" to get started</p>
+          </div>
         )}
       </div>
 
@@ -453,30 +378,53 @@ function LocationsTab({ locations, onLocationsChange, organizationId }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Work Locations</h3>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="btn-primary"
-        >
-          Add Location
-        </button>
-      </div>
+      <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+              📍
+            </div>
+            <h3 className="text-2xl font-bold text-white">Work Locations</h3>
+          </div>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="group bg-gradient-to-r from-orange-500 to-red-600 text-white px-6 py-3 rounded-xl font-medium hover:from-orange-600 hover:to-red-700 transition-all duration-300 hover:scale-105 shadow-lg"
+          >
+            <span className="flex items-center space-x-2">
+              <span>➕</span>
+              <span>Add Location</span>
+            </span>
+          </button>
+        </div>
 
-      <div className="card">
         {locations.length > 0 ? (
-          <div className="space-y-3">
-            {locations.map((location) => (
-              <div key={location.id} className="p-3 border-b border-gray-100 last:border-b-0">
-                <p className="font-medium">{location.name}</p>
-                {location.address && (
-                  <p className="text-sm text-gray-600">{location.address}</p>
-                )}
+          <div className="space-y-4">
+            {locations.map((location, index) => (
+              <div 
+                key={location.id} 
+                className="group bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-[1.02]"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-blue-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
+                    📍
+                  </div>
+                  <div>
+                    <p className="font-bold text-xl text-white">{location.name}</p>
+                    {location.address && (
+                      <p className="text-white/70 text-sm">🏢 {location.address}</p>
+                    )}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-8">No locations added yet</p>
+          <div className="text-center py-16">
+            <div className="text-8xl mb-6">📍</div>
+            <p className="text-white/80 text-xl font-medium mb-2">No locations added yet</p>
+            <p className="text-white/60">Click "Add Location" to get started</p>
+          </div>
         )}
       </div>
 
@@ -520,17 +468,23 @@ function AddLocationForm({ organizationId, onSuccess, onCancel }) {
   }
 
   return (
-    <div className="card">
-      <h4 className="text-lg font-semibold mb-4">Add New Location</h4>
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
+      <div className="flex items-center space-x-3 mb-8">
+        <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+          📍
+        </div>
+        <h4 className="text-2xl font-bold text-white">Add New Location</h4>
+      </div>
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Location Name *
+          <label className="block text-white/90 font-medium mb-3">
+            📝 Location Name *
           </label>
           <input
             type="text"
             required
-            className="input"
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g., Main Office, Warehouse, Remote"
@@ -538,32 +492,32 @@ function AddLocationForm({ organizationId, onSuccess, onCancel }) {
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Address (Optional)
+          <label className="block text-white/90 font-medium mb-3">
+            🏢 Address (Optional)
           </label>
           <input
             type="text"
-            className="input"
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="e.g., 123 Main St, City, State"
           />
         </div>
 
-        <div className="flex space-x-3">
+        <div className="flex space-x-4 pt-6">
           <button
             type="submit"
             disabled={loading}
-            className="btn-primary flex-1"
+            className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 text-white py-3 rounded-xl font-medium hover:from-orange-600 hover:to-red-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Adding...' : 'Add Location'}
+            {loading ? '⏳ Adding...' : '✅ Add Location'}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="btn-secondary flex-1"
+            className="flex-1 bg-white/10 backdrop-blur-sm text-white py-3 rounded-xl font-medium hover:bg-white/20 transition-all duration-300 border border-white/20"
           >
-            Cancel
+            ❌ Cancel
           </button>
         </div>
       </form>
@@ -617,24 +571,29 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
   }
 
   return (
-    <div className="card">
-      <h4 className="text-lg font-semibold mb-4">Add New Employee</h4>
+    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
+      <div className="flex items-center space-x-3 mb-8">
+        <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+          👤
+        </div>
+        <h4 className="text-2xl font-bold text-white">Add New Employee</h4>
+      </div>
       
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-800 text-sm">
-          {error}
+        <div className="mb-6 p-4 bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl text-red-200 text-sm">
+          ❌ {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            First Name *
+          <label className="block text-white/90 font-medium mb-3">
+            👤 First Name *
           </label>
           <input
             type="text"
             required
-            className="input"
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
             value={formData.firstName}
             onChange={(e) => setFormData({...formData, firstName: e.target.value})}
             placeholder="John"
@@ -642,13 +601,13 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Last Name *
+          <label className="block text-white/90 font-medium mb-3">
+            👤 Last Name *
           </label>
           <input
             type="text"
             required
-            className="input"
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
             value={formData.lastName}
             onChange={(e) => setFormData({...formData, lastName: e.target.value})}
             placeholder="Doe"
@@ -656,13 +615,13 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Email *
+          <label className="block text-white/90 font-medium mb-3">
+            📧 Email *
           </label>
           <input
             type="email"
             required
-            className="input"
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
             value={formData.email}
             onChange={(e) => setFormData({...formData, email: e.target.value})}
             placeholder="john@company.com"
@@ -670,40 +629,40 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Role
+          <label className="block text-white/90 font-medium mb-3">
+            🔐 Role
           </label>
           <select
-            className="input"
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
             value={formData.role}
             onChange={(e) => setFormData({...formData, role: e.target.value})}
           >
-            <option value="employee">Employee</option>
-            <option value="manager">Manager</option>
-            <option value="admin">Admin</option>
+            <option value="employee" className="bg-gray-800">👷 Employee</option>
+            <option value="manager" className="bg-gray-800">👔 Manager</option>
+            <option value="admin" className="bg-gray-800">⚙️ Admin</option>
           </select>
         </div>
 
-        <div className="flex space-x-3">
+        <div className="flex space-x-4 pt-6">
           <button
             type="submit"
             disabled={loading}
-            className="btn-primary flex-1"
+            className="flex-1 bg-gradient-to-r from-green-500 to-blue-600 text-white py-3 rounded-xl font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Adding Employee...' : 'Add Employee'}
+            {loading ? '⏳ Adding Employee...' : '✅ Add Employee'}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="btn-secondary flex-1"
+            className="flex-1 bg-white/10 backdrop-blur-sm text-white py-3 rounded-xl font-medium hover:bg-white/20 transition-all duration-300 border border-white/20"
           >
-            Cancel
+            ❌ Cancel
           </button>
         </div>
       </form>
 
-      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-blue-800 text-sm">
-        💡 Employee will be created with temporary password: <strong>TempPass123!</strong><br/>
+      <div className="mt-6 p-4 bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-xl text-blue-200 text-sm">
+        💡 <strong>Important:</strong> Employee will be created with temporary password: <strong>TempPass123!</strong><br/>
         Make sure to tell them to change it after first login.
       </div>
     </div>
@@ -753,13 +712,18 @@ function PasswordChangeModal({ onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="card-glass max-w-md w-full">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold">Change Password</h3>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20 transform transition-all duration-300 scale-100 opacity-100">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+              🔑
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800">Change Password</h3>
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-xl"
+            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
           >
             ×
           </button>
@@ -767,26 +731,28 @@ function PasswordChangeModal({ onClose }) {
 
         {success ? (
           <div className="text-center py-8">
-            <div className="text-green-600 text-4xl mb-4">✓</div>
-            <p className="text-green-600 font-medium">Password updated successfully!</p>
-            <p className="text-sm text-gray-500 mt-2">This dialog will close automatically.</p>
+            <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white text-2xl mx-auto mb-4 shadow-lg">
+              ✓
+            </div>
+            <p className="text-green-600 font-medium text-lg">Password updated successfully!</p>
+            <p className="text-gray-500 mt-2">This dialog will close automatically.</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded text-red-800 text-sm">
-                {error}
+              <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-sm font-medium">
+                ❌ {error}
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Current Password
+              <label className="block text-gray-700 font-medium mb-3">
+                🔒 Current Password
               </label>
               <input
                 type="password"
                 required
-                className="input"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
                 value={formData.currentPassword}
                 onChange={(e) => setFormData({...formData, currentPassword: e.target.value})}
                 placeholder="Enter current password"
@@ -794,28 +760,28 @@ function PasswordChangeModal({ onClose }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                New Password
+              <label className="block text-gray-700 font-medium mb-3">
+                🆕 New Password
               </label>
               <input
                 type="password"
                 required
-                className="input"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
                 value={formData.newPassword}
                 onChange={(e) => setFormData({...formData, newPassword: e.target.value})}
-                placeholder="Enter new password"
+                placeholder="Enter new password (min 6 characters)"
                 minLength="6"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm New Password
+              <label className="block text-gray-700 font-medium mb-3">
+                ✅ Confirm New Password
               </label>
               <input
                 type="password"
                 required
-                className="input"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                 placeholder="Confirm new password"
@@ -823,20 +789,27 @@ function PasswordChangeModal({ onClose }) {
               />
             </div>
 
-            <div className="flex space-x-3 pt-4">
+            <div className="grid grid-cols-2 gap-4 pt-6">
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-primary flex-1"
+                className="bg-gradient-to-r from-purple-500 to-blue-600 text-white py-3 rounded-xl font-medium hover:from-purple-600 hover:to-blue-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Updating...' : 'Update Password'}
+                {loading ? (
+                  <span className="flex items-center justify-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Updating...</span>
+                  </span>
+                ) : (
+                  '🔐 Update Password'
+                )}
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="btn-secondary flex-1"
+                className="bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200 transition-all duration-300"
               >
-                Cancel
+                ❌ Cancel
               </button>
             </div>
           </form>
