@@ -10,6 +10,23 @@ export default function Home({ session }) {
   const [loading, setLoading] = useState(true)
   const [currentSession, setCurrentSession] = useState(null)
 
+  const fetchEmployee = useCallback(async () => {
+    try {
+      const { data, error } = await database.getCurrentEmployee(session.user.id)
+      
+      if (error) {
+        console.error('Error fetching employee:', error)
+        setEmployee(null) // User needs setup
+      } else {
+        setEmployee(data) // Employee found
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      setEmployee(null)
+    }
+    setLoading(false)
+  }, [session])
+
   const checkSession = useCallback(async () => {
     // Check for Supabase Auth session (admins)
     if (session?.user) {
@@ -39,23 +56,6 @@ export default function Home({ session }) {
   useEffect(() => {
     checkSession()
   }, [checkSession])
-
-  const fetchEmployee = useCallback(async () => {
-    try {
-      const { data, error } = await database.getCurrentEmployee(session.user.id)
-      
-      if (error) {
-        console.error('Error fetching employee:', error)
-        setEmployee(null) // User needs setup
-      } else {
-        setEmployee(data) // Employee found
-      }
-    } catch (error) {
-      console.error('Error:', error)
-      setEmployee(null)
-    }
-    setLoading(false)
-  }, [session])
 
   if (loading) {
     return (
