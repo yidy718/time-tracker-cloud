@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
 import { database } from '../lib/supabase'
-import jsPDF from 'jspdf'
-import 'jspdf-autotable'
 
 export default function ReportsTab({ employees, organizationId }) {
   const [selectedEmployee, setSelectedEmployee] = useState('all')
@@ -168,7 +166,7 @@ VasHours Team`
     window.open(mailtoLink)
   }
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     if (!reportData || reportData.length === 0) {
       alert('No data to generate PDF report')
       return
@@ -176,6 +174,9 @@ VasHours Team`
 
     try {
       console.log('📄 Starting PDF generation...')
+      
+      // Dynamic import of jsPDF
+      const jsPDF = (await import('jspdf')).default
       const pdf = new jsPDF()
     
     // Header with branding
@@ -230,65 +231,71 @@ VasHours Team`
       pdf.text(`Location: ${selectedLoc?.name}`, 120, 72)
     }
     
-    // Detailed Time Entries Table
+    // Detailed Time Entries - Manual Table Creation
     pdf.setFontSize(16)
     pdf.setFont('helvetica', 'bold')
     pdf.text('📋 Detailed Time Entries', 20, 100)
     
-    // Prepare table data
-    const tableData = reportData.map(entry => {
+    // Table headers
+    pdf.setFontSize(10)
+    pdf.setFont('helvetica', 'bold')
+    let yPos = 115
+    
+    // Header background
+    pdf.setFillColor(88, 28, 135)
+    pdf.rect(20, yPos - 5, 170, 8, 'F')
+    
+    // Header text
+    pdf.setTextColor(255, 255, 255)
+    pdf.text('Employee', 22, yPos)
+    pdf.text('Date', 55, yPos)
+    pdf.text('Hours', 80, yPos)
+    pdf.text('Clock In', 100, yPos)
+    pdf.text('Clock Out', 125, yPos)
+    pdf.text('Location', 150, yPos)
+    pdf.text('Pay', 175, yPos)
+    
+    // Reset text color for data
+    pdf.setTextColor(0, 0, 0)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(8)
+    
+    yPos += 10
+    
+    // Table data
+    reportData.forEach((entry, index) => {
+      // Alternate row background
+      if (index % 2 === 0) {
+        pdf.setFillColor(245, 245, 245)
+        pdf.rect(20, yPos - 4, 170, 7, 'F')
+      }
+      
       const durationHours = (entry.duration_minutes || 0) / 60
       const rate = entry.hourly_rate || 0
       const totalPay = durationHours * rate
       
-      return [
-        `${entry.first_name} ${entry.last_name}`,
-        new Date(entry.clock_in).toLocaleDateString(),
-        formatDuration(entry.duration_minutes || 0),
-        new Date(entry.clock_in).toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        }),
-        entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        }) : 'Active',
-        entry.location_name || 'N/A',
-        rate ? `$${rate.toFixed(2)}` : 'N/A',
-        rate ? `$${totalPay.toFixed(2)}` : 'N/A'
-      ]
-    })
-    
-    // Generate table
-    pdf.autoTable({
-      startY: 105,
-      head: [['Employee', 'Date', 'Hours', 'Clock In', 'Clock Out', 'Location', 'Rate/hr', 'Total Pay']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { 
-        fillColor: [88, 28, 135], // Purple header
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 10
-      },
-      bodyStyles: { 
-        fontSize: 9,
-        textColor: [0, 0, 0]
-      },
-      alternateRowStyles: { 
-        fillColor: [245, 245, 245] 
-      },
-      columnStyles: {
-        0: { cellWidth: 25 }, // Employee
-        1: { cellWidth: 20 }, // Date
-        2: { cellWidth: 18 }, // Hours
-        3: { cellWidth: 20 }, // Clock In
-        4: { cellWidth: 20 }, // Clock Out
-        5: { cellWidth: 25 }, // Location
-        6: { cellWidth: 18 }, // Rate
-        7: { cellWidth: 20 }  // Total Pay
-      },
-      margin: { left: 20, right: 20 }
+      // Row data
+      pdf.text(`${entry.first_name} ${entry.last_name}`.substring(0, 12), 22, yPos)
+      pdf.text(new Date(entry.clock_in).toLocaleDateString().substring(0, 8), 55, yPos)
+      pdf.text(formatDuration(entry.duration_minutes || 0), 80, yPos)
+      pdf.text(new Date(entry.clock_in).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }), 100, yPos)
+      pdf.text(entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }) : 'Active', 125, yPos)
+      pdf.text((entry.location_name || 'N/A').substring(0, 10), 150, yPos)
+      pdf.text(rate ? `$${totalPay.toFixed(2)}` : 'N/A', 175, yPos)
+      
+      yPos += 7
+      
+      // Add new page if needed
+      if (yPos > 270) {
+        pdf.addPage()
+        yPos = 30
+      }
     })
     
     // Footer
@@ -409,9 +416,9 @@ VasHours Team`
             <h4 className="text-xl font-bold text-white">Report Results</h4>
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
               <button
-                onClick={() => {
+                onClick={async () => {
                   console.log('🔍 PDF button clicked, reportData:', reportData?.length || 0, 'entries')
-                  generatePDF()
+                  await generatePDF()
                 }}
                 className="bg-gradient-to-r from-red-500 to-pink-600 text-white px-6 py-2 rounded-xl font-medium hover:from-red-600 hover:to-pink-700 transition-all duration-300 hover:scale-105 shadow-lg"
               >
