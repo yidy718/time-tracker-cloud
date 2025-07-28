@@ -122,38 +122,40 @@ export default function SuperAdminDashboard({ session, employee }) {
       {/* Header */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-blue-600/20"></div>
-        <div className="relative px-6 py-8">
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
+        <div className="relative px-4 sm:px-6 py-6 sm:py-8">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-4 sm:space-y-0">
+            <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <span className="text-2xl">👑</span>
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <span className="text-xl sm:text-2xl">👑</span>
                 </div>
-                <div>
-                  <h1 className="text-4xl font-bold text-white mb-1">Super Admin</h1>
-                  <p className="text-white/80 text-lg">Multi-Company Management</p>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-2xl sm:text-4xl font-bold text-white mb-1 truncate">Super Admin</h1>
+                  <p className="text-white/80 text-base sm:text-lg truncate">Multi-Company Management</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm">
                   {employee.first_name[0]}{employee.last_name[0]}
                 </div>
-                <span className="text-white/90 font-medium">{employee.first_name} {employee.last_name}</span>
+                <span className="text-white/90 font-medium text-sm sm:text-base truncate">{employee.first_name} {employee.last_name}</span>
                 <span className="px-2 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium">Super Admin</span>
               </div>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
               <button
                 onClick={() => setShowAdminManager(true)}
-                className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-3 rounded-xl font-medium hover:from-purple-600 hover:to-pink-700 transition-all duration-300 hover:scale-105 shadow-lg"
+                className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-4 sm:px-6 py-3 rounded-xl font-medium hover:from-purple-600 hover:to-pink-700 transition-all duration-300 hover:scale-105 shadow-lg text-sm sm:text-base"
               >
-                👑 Manage Admins
+                <span className="sm:hidden">👑 Admins</span>
+                <span className="hidden sm:inline">👑 Manage Admins</span>
               </button>
               <button
                 onClick={() => setShowSetupWizard(true)}
-                className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-300 hover:scale-105 shadow-lg"
+                className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-4 sm:px-6 py-3 rounded-xl font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-300 hover:scale-105 shadow-lg text-sm sm:text-base"
               >
-                🏢 Add New Company
+                <span className="sm:hidden">🏢 Add Company</span>
+                <span className="hidden sm:inline">🏢 Add New Company</span>
               </button>
             </div>
           </div>
@@ -161,55 +163,55 @@ export default function SuperAdminDashboard({ session, employee }) {
       </div>
 
       {/* Stats Cards */}
-      <div className="px-6 pb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="group relative overflow-hidden bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105">
+      <div className="px-4 sm:px-6 pb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
+          <div className="group relative overflow-hidden bg-white/10 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-purple-500/20 rounded-full -translate-y-16 translate-x-16"></div>
             <div className="relative flex items-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-2xl flex items-center justify-center text-white text-2xl mr-4 shadow-lg">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-2xl flex items-center justify-center text-white text-xl sm:text-2xl mr-3 sm:mr-4 shadow-lg">
                 🏢
               </div>
               <div>
-                <p className="text-white/60 text-sm font-medium uppercase tracking-wide">Total Companies</p>
-                <p className="text-4xl font-bold text-white">{stats.totalCompanies}</p>
+                <p className="text-white/60 text-xs sm:text-sm font-medium uppercase tracking-wide">Total Companies</p>
+                <p className="text-2xl sm:text-4xl font-bold text-white">{stats.totalCompanies}</p>
               </div>
             </div>
           </div>
           
-          <div className="group relative overflow-hidden bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105">
+          <div className="group relative overflow-hidden bg-white/10 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/20 to-blue-500/20 rounded-full -translate-y-16 translate-x-16"></div>
             <div className="relative flex items-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl flex items-center justify-center text-white text-2xl mr-4 shadow-lg">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl flex items-center justify-center text-white text-xl sm:text-2xl mr-3 sm:mr-4 shadow-lg">
                 👥
               </div>
               <div>
-                <p className="text-white/60 text-sm font-medium uppercase tracking-wide">Total Employees</p>
-                <p className="text-4xl font-bold text-white">{stats.totalEmployees}</p>
+                <p className="text-white/60 text-xs sm:text-sm font-medium uppercase tracking-wide">Total Employees</p>
+                <p className="text-2xl sm:text-4xl font-bold text-white">{stats.totalEmployees}</p>
               </div>
             </div>
           </div>
           
-          <div className="group relative overflow-hidden bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105">
+          <div className="group relative overflow-hidden bg-white/10 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-400/20 to-red-500/20 rounded-full -translate-y-16 translate-x-16"></div>
             <div className="relative flex items-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center text-white text-2xl mr-4 shadow-lg">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center text-white text-xl sm:text-2xl mr-3 sm:mr-4 shadow-lg">
                 ⏰
               </div>
               <div>
-                <p className="text-white/60 text-sm font-medium uppercase tracking-wide">Active Today</p>
-                <p className="text-4xl font-bold text-white">{stats.activeToday}</p>
+                <p className="text-white/60 text-xs sm:text-sm font-medium uppercase tracking-wide">Active Today</p>
+                <p className="text-2xl sm:text-4xl font-bold text-white">{stats.activeToday}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Companies List */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
-          <div className="flex items-center space-x-3 mb-8">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 sm:p-8 border border-white/20">
+          <div className="flex items-center space-x-3 mb-6 sm:mb-8">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center text-white text-lg sm:text-xl shadow-lg">
               📊
             </div>
-            <h3 className="text-2xl font-bold text-white">Company Overview</h3>
+            <h3 className="text-xl sm:text-2xl font-bold text-white">Company Overview</h3>
           </div>
           
           {companies.length > 0 ? (
@@ -217,31 +219,31 @@ export default function SuperAdminDashboard({ session, employee }) {
               {companies.map((company, index) => (
                 <div 
                   key={company.id} 
-                  className="group bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-[1.02]"
+                  className="group bg-white/10 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-[1.02]"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+                    <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-2xl flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-lg flex-shrink-0">
                         {company.name[0]}
                       </div>
-                      <div>
-                        <p className="font-bold text-xl text-white">{company.name}</p>
-                        <p className="text-white/70 text-sm">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-lg sm:text-xl text-white truncate">{company.name}</p>
+                        <p className="text-white/70 text-xs sm:text-sm">
                           Created {new Date(company.created_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right mr-4">
-                        <p className="font-mono text-2xl font-bold text-green-400">
+                    <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+                      <div className="text-left sm:text-right">
+                        <p className="font-mono text-lg sm:text-2xl font-bold text-green-400">
                           {company.employees?.[0]?.count || 0} employees
                         </p>
-                        <p className="text-white/60 text-sm">
+                        <p className="text-white/60 text-xs sm:text-sm">
                           {company.active_employees?.[0]?.count || 0} active
                         </p>
                       </div>
-                      <div className="flex space-x-2">
+                      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                         <button
                           onClick={() => viewCompanyDetails(company)}
                           className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"

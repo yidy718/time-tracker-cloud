@@ -52,27 +52,27 @@ export default function AdminDashboard({ session, employee }) {
       {/* Header */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-blue-600/20"></div>
-        <div className="relative px-6 py-8">
+        <div className="relative px-4 sm:px-6 py-6 sm:py-8">
           <div className="flex justify-between items-start">
-            <div className="flex-1">
+            <div className="flex-1 min-w-0 pr-4">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <span className="text-2xl">⚙️</span>
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <span className="text-xl sm:text-2xl">⚙️</span>
                 </div>
-                <div>
-                  <h1 className="text-4xl font-bold text-white mb-1">Admin Dashboard</h1>
-                  <p className="text-white/80 text-lg">{employee.organization?.name}</p>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-2xl sm:text-4xl font-bold text-white mb-1 truncate">Admin Dashboard</h1>
+                  <p className="text-white/80 text-base sm:text-lg truncate">{employee.organization?.name}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm">
                   {employee.first_name[0]}{employee.last_name[0]}
                 </div>
-                <span className="text-white/90 font-medium">{employee.first_name} {employee.last_name}</span>
+                <span className="text-white/90 font-medium text-sm sm:text-base truncate">{employee.first_name} {employee.last_name}</span>
                 <span className="px-2 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium">Admin</span>
               </div>
             </div>
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <button
                 onClick={() => setShowMenu(!showMenu)}
                 className="group relative w-12 h-12 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center transition-all duration-300 hover:bg-white/20 hover:scale-105"
@@ -86,7 +86,7 @@ export default function AdminDashboard({ session, employee }) {
                     className="fixed inset-0 z-[9999]" 
                     onClick={() => setShowMenu(false)}
                   />
-                  <div className="absolute right-0 top-16 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-[10000] transform transition-all duration-300 scale-100 opacity-100">
+                  <div className="absolute right-0 sm:right-0 left-4 sm:left-auto top-16 w-64 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-[10000] transform transition-all duration-300 scale-100 opacity-100">
                     <div className="p-4">
                       <button
                         onClick={() => {
@@ -115,9 +115,9 @@ export default function AdminDashboard({ session, employee }) {
       </div>
 
       {/* Navigation */}
-      <div className="px-6 pb-6">
+      <div className="px-4 sm:px-6 pb-6">
         <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-2 border border-white/20">
-          <div className="flex space-x-2 overflow-x-auto">
+          <div className="flex space-x-1 sm:space-x-2 overflow-x-auto scrollbar-hide">
             {[
               { id: 'dashboard', name: 'Dashboard', emoji: '📊', color: 'from-blue-500 to-purple-600' },
               { id: 'reports', name: 'Reports', emoji: '📈', color: 'from-purple-500 to-pink-600' },
@@ -127,21 +127,21 @@ export default function AdminDashboard({ session, employee }) {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
+                className={`flex items-center space-x-1 sm:space-x-2 px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap text-sm sm:text-base ${
                   activeTab === tab.id
                     ? `bg-gradient-to-r ${tab.color} text-white shadow-lg transform scale-105`
                     : 'text-white/70 hover:text-white hover:bg-white/10'
                 }`}
               >
-                <span className="text-lg">{tab.emoji}</span>
-                <span>{tab.name}</span>
+                <span className="text-base sm:text-lg">{tab.emoji}</span>
+                <span className="hidden xs:inline sm:inline">{tab.name}</span>
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="px-6 pb-8">
+      <div className="px-4 sm:px-6 pb-8">
         {activeTab === 'dashboard' && (
           <DashboardTab 
             activeSessions={activeSessions}
