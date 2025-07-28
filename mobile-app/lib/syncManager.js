@@ -5,6 +5,7 @@ import { OfflineStorage } from './offlineStorage'
 export class SyncManager {
   static isOnline = true
   static listeners = []
+  static isSyncing = false // RACE CONDITION FIX: Add sync lock
 
   // Initialize network monitoring
   static initialize() {
@@ -38,6 +39,13 @@ export class SyncManager {
   static async syncOfflineActions() {
     if (!this.isOnline) return
 
+    // RACE CONDITION FIX: Prevent concurrent sync operations
+    if (this.isSyncing) {
+      console.log('Sync already in progress, skipping')
+      return
+    }
+
+    this.isSyncing = true
     try {
       const offlineActions = await OfflineStorage.getOfflineActions()
       console.log(`Syncing ${offlineActions.length} offline actions`)
@@ -54,6 +62,8 @@ export class SyncManager {
       }
     } catch (error) {
       console.error('Error syncing offline actions:', error)
+    } finally {
+      this.isSyncing = false // RACE CONDITION FIX: Always release lock
     }
   }
 

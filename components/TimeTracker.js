@@ -83,12 +83,22 @@ export default function TimeTracker({ session, employee }) {
       return
     }
 
+    // RACE CONDITION FIX: Prevent multiple concurrent clock-in operations
+    if (loading || currentSession) {
+      console.log('Clock-in already in progress or user already clocked in')
+      return
+    }
+
     setLoading(true)
     try {
       const { data, error } = await database.clockIn(employee.id, selectedLocation)
       if (error) throw error
       
       setCurrentSession(data)
+      
+      // RACE CONDITION FIX: Reload data after successful clock-in to ensure consistency
+      await loadTotalHours()
+      
       alert('Clocked in successfully!')
     } catch (error) {
       console.error('Clock in error:', error)
@@ -100,6 +110,12 @@ export default function TimeTracker({ session, employee }) {
   const handleClockOut = async () => {
     if (!currentSession) return
 
+    // RACE CONDITION FIX: Prevent multiple concurrent clock-out operations
+    if (loading) {
+      console.log('Clock-out already in progress')
+      return
+    }
+
     setLoading(true)
     try {
       const { data, error } = await database.clockOut(currentSession.id)
@@ -108,6 +124,10 @@ export default function TimeTracker({ session, employee }) {
       setCurrentSession(null)
       setIsOnBreak(false)
       setBreakStartTime(null)
+      
+      // RACE CONDITION FIX: Reload data after successful clock-out to ensure consistency
+      await loadTotalHours()
+      
       alert('Clocked out successfully!')
     } catch (error) {
       console.error('Clock out error:', error)

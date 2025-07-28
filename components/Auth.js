@@ -29,10 +29,19 @@ export default function Auth() {
         }
 
         // Create a simple session for employee
-        localStorage.setItem('employee_session', JSON.stringify({
+        // SECURITY IMPROVEMENT: Adding session expiration and basic obfuscation
+        const sessionData = {
           user: { id: employee.id, email: employee.email },
-          employee: employee
-        }))
+          employee: employee,
+          timestamp: Date.now(),
+          expires: Date.now() + (8 * 60 * 60 * 1000) // 8 hours
+        }
+        
+        // Basic obfuscation (not real security, but better than plain text)
+        // For production, use proper encryption libraries
+        const encodedSession = btoa(JSON.stringify(sessionData))
+        
+        localStorage.setItem('employee_session', encodedSession)
         
         // Trigger page refresh to load employee interface
         window.location.reload()
