@@ -486,6 +486,30 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
 
 function LocationsTab({ locations, onLocationsChange, organizationId }) {
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showEditForm, setShowEditForm] = useState(false)
+  const [selectedLocation, setSelectedLocation] = useState(null)
+
+  const editLocation = (location) => {
+    setSelectedLocation(location)
+    setShowEditForm(true)
+  }
+
+  const deleteLocation = async (locationId, locationName) => {
+    if (!confirm(`Are you sure you want to delete "${locationName}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const { error } = await database.deleteLocation(locationId)
+      if (error) throw error
+      
+      alert(`Location "${locationName}" has been deleted successfully.`)
+      onLocationsChange() // Refresh the list
+    } catch (error) {
+      console.error('Error deleting location:', error)
+      alert(`Error deleting location: ${error.message}`)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -499,20 +523,54 @@ function LocationsTab({ locations, onLocationsChange, organizationId }) {
         </button>
       </div>
 
-      <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
+      <div className="space-y-4">
         {locations.length > 0 ? (
-          <div className="space-y-4">
-            {locations.map((location) => (
-              <div key={location.id} className="p-4 bg-white/5 rounded-xl border border-white/10">
-                <p className="font-medium text-white">{location.name}</p>
-                {location.address && (
-                  <p className="text-sm text-white/70">{location.address}</p>
-                )}
+          locations.map((location, index) => (
+            <div 
+              key={location.id} 
+              className="group bg-white/10 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-[1.02]"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+                <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-400 to-green-500 rounded-2xl flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-lg flex-shrink-0">
+                    📍
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-lg sm:text-xl text-white truncate">{location.name}</p>
+                    {location.address && (
+                      <p className="text-white/70 text-sm truncate">{location.address}</p>
+                    )}
+                    <p className="text-white/50 text-xs">
+                      {location.is_active ? 'Active' : 'Inactive'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                  <button
+                    onClick={() => editLocation(location)}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
+                    title="Edit Location"
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    onClick={() => deleteLocation(location.id, location.name)}
+                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
+                    title="Delete Location"
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))
         ) : (
-          <p className="text-white/60 text-center py-8">No locations added yet</p>
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20 text-center">
+            <div className="text-6xl mb-4">📍</div>
+            <p className="text-white/60 text-lg">No locations added yet</p>
+            <p className="text-white/40 text-sm mt-2">Click &quot;Add Location&quot; to get started</p>
+          </div>
         )}
       </div>
 
@@ -524,6 +582,21 @@ function LocationsTab({ locations, onLocationsChange, organizationId }) {
             onLocationsChange()
           }}
           onCancel={() => setShowAddForm(false)}
+        />
+      )}
+
+      {showEditForm && selectedLocation && (
+        <EditLocationForm
+          location={selectedLocation}
+          onSuccess={() => {
+            setShowEditForm(false)
+            setSelectedLocation(null)
+            onLocationsChange()
+          }}
+          onCancel={() => {
+            setShowEditForm(false)
+            setSelectedLocation(null)
+          }}
         />
       )}
     </div>
@@ -593,6 +666,82 @@ function AddLocationForm({ organizationId, onSuccess, onCancel }) {
             className="bg-gradient-to-r from-green-500 to-blue-600 text-white py-3 px-6 rounded-xl font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-1"
           >
             {loading ? 'Adding...' : 'Add Location'}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="bg-white/10 text-white py-3 px-6 rounded-xl font-medium hover:bg-white/20 transition-all duration-300 flex-1"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function EditLocationForm({ location, onSuccess, onCancel }) {
+  const [name, setName] = useState(location.name || '')
+  const [address, setAddress] = useState(location.address || '')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const { error } = await database.updateLocation(location.id, {
+        name,
+        address
+      })
+
+      if (error) throw error
+      onSuccess()
+    } catch (error) {
+      console.error('Error updating location:', error)
+      alert('Error updating location. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
+      <h4 className="text-xl font-bold text-white mb-6">Edit Location</h4>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Location Name *
+          </label>
+          <input
+            type="text"
+            required
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-300"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g., Main Office, Warehouse, Remote"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Address (Optional)
+          </label>
+          <input
+            type="text"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-300"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="e.g., 123 Main St, City, State"
+          />
+        </div>
+
+        <div className="flex space-x-4">
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-gradient-to-r from-yellow-500 to-orange-600 text-white py-3 px-6 rounded-xl font-medium hover:from-yellow-600 hover:to-orange-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+          >
+            {loading ? 'Updating...' : 'Update Location'}
           </button>
           <button
             type="button"

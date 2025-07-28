@@ -3,13 +3,15 @@ import { database } from '../lib/supabase'
 
 export default function ReportsTab({ employees, organizationId }) {
   const [selectedEmployee, setSelectedEmployee] = useState('all')
+  const [selectedLocation, setSelectedLocation] = useState('all')
+  const [locations, setLocations] = useState([])
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [reportData, setReportData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [showShareOptions, setShowShareOptions] = useState(false)
 
-  // Set default dates (current week)
+  // Set default dates (current week) and load locations
   useEffect(() => {
     const now = new Date()
     const startOfWeek = new Date(now)
@@ -22,7 +24,20 @@ export default function ReportsTab({ employees, organizationId }) {
     
     setStartDate(startOfWeek.toISOString().split('T')[0])
     setEndDate(endOfWeek.toISOString().split('T')[0])
-  }, [])
+
+    // Load locations
+    loadLocations()
+  }, [organizationId])
+
+  const loadLocations = async () => {
+    try {
+      const { data, error } = await database.getLocations(organizationId)
+      if (error) throw error
+      setLocations(data || [])
+    } catch (error) {
+      console.error('Error loading locations:', error)
+    }
+  }
 
   const generateReport = async () => {
     setLoading(true)
@@ -35,7 +50,15 @@ export default function ReportsTab({ employees, organizationId }) {
       })
 
       if (error) throw error
-      setReportData(data)
+      
+      // Filter by location if selected
+      let filteredData = data || []
+      if (selectedLocation !== 'all') {
+        const selectedLocationName = locations.find(loc => loc.id === selectedLocation)?.name
+        filteredData = filteredData.filter(entry => entry.location_name === selectedLocationName)
+      }
+      
+      setReportData(filteredData)
     } catch (error) {
       console.error('Error generating report:', error)
       alert('Error generating report. Please try again.')
@@ -55,14 +78,15 @@ export default function ReportsTab({ employees, organizationId }) {
   const generateCSV = () => {
     if (!reportData) return ''
 
-    const headers = ['Employee', 'Date', 'Hours Worked', 'Clock In', 'Clock Out', 'Location']
+    const headers = ['Employee', 'Date', 'Hours Worked', 'Clock In', 'Clock Out', 'Location', 'Duration (Minutes)']
     const rows = reportData.map(entry => [
       `${entry.first_name} ${entry.last_name}`,
       new Date(entry.clock_in).toLocaleDateString(),
       formatDuration(entry.duration_minutes || 0),
       new Date(entry.clock_in).toLocaleTimeString(),
-      entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString() : 'N/A',
-      entry.location_name || 'N/A'
+      entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString() : 'In Progress',
+      entry.location_name || 'N/A',
+      entry.duration_minutes || 0
     ])
 
     const csvContent = [headers, ...rows]
@@ -70,6 +94,22 @@ export default function ReportsTab({ employees, organizationId }) {
       .join('\n')
 
     return csvContent
+  }
+
+  const downloadCSV = () => {
+    const csvContent = generateCSV()
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `time-report-${startDate}-to-${endDate}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
   }
 
   const copyToClipboard = async () => {
@@ -103,7 +143,7 @@ export default function ReportsTab({ employees, organizationId }) {
           <h3 className="text-2xl font-bold text-white">Weekly Hours Report</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div>
             <label className="block text-white/80 font-medium mb-3">
               Employee
@@ -117,6 +157,24 @@ export default function ReportsTab({ employees, organizationId }) {
               {employees.map((emp) => (
                 <option key={emp.id} value={emp.id}>
                   {emp.first_name} {emp.last_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-white/80 font-medium mb-3">
+              Location
+            </label>
+            <select
+              value={selectedLocation}
+              onChange={(e) => setSelectedLocation(e.target.value)}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+            >
+              <option value="all">All Locations</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}
                 </option>
               ))}
             </select>
@@ -166,14 +224,22 @@ export default function ReportsTab({ employees, organizationId }) {
       {/* Report Results */}
       {reportData && (
         <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 space-y-4 sm:space-y-0">
             <h4 className="text-xl font-bold text-white">Report Results</h4>
-            <button
-              onClick={() => setShowShareOptions(true)}
-              className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-2 rounded-xl font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-300 hover:scale-105 shadow-lg"
-            >
-              📤 Share Report
-            </button>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+              <button
+                onClick={downloadCSV}
+                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg"
+              >
+                📊 Download CSV
+              </button>
+              <button
+                onClick={() => setShowShareOptions(true)}
+                className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-2 rounded-xl font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-300 hover:scale-105 shadow-lg"
+              >
+                📤 Share Report
+              </button>
+            </div>
           </div>
 
           <div className="space-y-4">
