@@ -103,7 +103,7 @@ export default function Home({ session }) {
           <div className="text-6xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-white mb-4">Invalid Employee Data</h1>
           <p className="text-white/80 mb-6">
-            There's an issue with your employee data. Please contact your administrator.
+            There&apos;s an issue with your employee data. Please contact your administrator.
           </p>
           <button
             onClick={() => {
