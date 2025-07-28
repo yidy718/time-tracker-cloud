@@ -39,7 +39,34 @@ export default function Home({ session }) {
     const employeeSessionData = localStorage.getItem('employee_session')
     if (employeeSessionData) {
       try {
-        const employeeSession = JSON.parse(employeeSessionData)
+        // SECURITY IMPROVEMENT: Handle new encoded session format with expiration
+        let employeeSession
+        
+        // Try to decode if it's the new format (base64 encoded)
+        try {
+          const decodedData = atob(employeeSessionData)
+          employeeSession = JSON.parse(decodedData)
+          
+          // Check if session has expired
+          if (employeeSession.expires && Date.now() > employeeSession.expires) {
+            console.log('Employee session expired')
+            localStorage.removeItem('employee_session')
+            setLoading(false)
+            return
+          }
+        } catch (decodeError) {
+          // Fall back to old format for backwards compatibility
+          employeeSession = JSON.parse(employeeSessionData)
+          
+          // If it's old format without expiration, create a new session
+          if (!employeeSession.expires) {
+            console.log('Upgrading old session format')
+            localStorage.removeItem('employee_session')
+            setLoading(false)
+            return
+          }
+        }
+        
         setCurrentSession(employeeSession)
         setEmployee(employeeSession.employee)
         setLoading(false)
