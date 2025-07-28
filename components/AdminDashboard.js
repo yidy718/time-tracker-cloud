@@ -611,7 +611,7 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
       
       // Create employee record directly (no Supabase Auth needed)
       // Let Supabase generate the UUID automatically
-      const { error: empError } = await database.createEmployee({
+      const employeeData = {
         organization_id: organizationId,
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -619,13 +619,21 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
         username: username,
         password: defaultPassword,
         role: formData.role
-      })
+      }
+      
+      console.log('Creating employee with data:', employeeData)
+      
+      const { data: createdEmployee, error: empError } = await database.createEmployee(employeeData)
+      
+      console.log('Employee creation result:', { createdEmployee, empError })
 
       if (empError) {
         // If username already exists, add a number
         if (empError.message.includes('duplicate key value violates unique constraint')) {
           const uniqueUsername = `${username}${Math.floor(Math.random() * 1000)}`
-          const { error: retryError } = await database.createEmployee({
+          console.log('Retrying with unique username:', uniqueUsername)
+          
+          const retryEmployeeData = {
             organization_id: organizationId,
             first_name: formData.firstName,
             last_name: formData.lastName,
@@ -633,14 +641,20 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
             username: uniqueUsername,
             password: defaultPassword,
             role: formData.role
-          })
+          }
+          
+          const { data: retryCreatedEmployee, error: retryError } = await database.createEmployee(retryEmployeeData)
+          console.log('Retry creation result:', { retryCreatedEmployee, retryError })
+          
           if (retryError) throw retryError
           
           alert(`Employee added successfully!\n\n👤 Username: ${uniqueUsername}\n🔑 Password: ${defaultPassword}\n\nEmployee can log in immediately using the Employee login option.`)
         } else {
+          console.error('Employee creation failed with error:', empError)
           throw empError
         }
       } else {
+        console.log('Employee created successfully:', createdEmployee)
         alert(`Employee added successfully!\n\n👤 Username: ${username}\n🔑 Password: ${defaultPassword}\n\nEmployee can log in immediately using the Employee login option.`)
       }
 

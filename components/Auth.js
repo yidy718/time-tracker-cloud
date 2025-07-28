@@ -20,6 +20,14 @@ export default function Auth() {
         // Employee login with username/password
         console.log('Attempting employee login with username:', username)
         
+        // Debug: First let's see what employees exist in the database
+        const { data: allEmployees, error: allError } = await supabase
+          .from('employees')
+          .select('id, username, first_name, last_name, is_active')
+          .limit(10)
+        
+        console.log('All employees in database (first 10):', allEmployees, 'Error:', allError)
+        
         // First check if employee exists with this username
         const { data: employeeCheck, error: checkError } = await supabase
           .from('employees')
