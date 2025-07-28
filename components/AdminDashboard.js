@@ -321,6 +321,48 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
     }
   }
 
+  const showCredentials = (employee) => {
+    const credentials = `Employee Login Information:
+
+👤 Name: ${employee.first_name} ${employee.last_name}
+📧 Email: ${employee.email}
+🔑 Username: ${employee.username}
+🔐 Password: ${employee.password}
+
+📱 Login Instructions:
+1. Go to the login page
+2. Click "Employee Login"
+3. Enter the username and password above
+4. Employees should change their password after first login`
+
+    alert(credentials)
+  }
+
+  const resetPassword = async (employee) => {
+    const newPassword = prompt(`Enter new password for ${employee.first_name} ${employee.last_name}:`, 'emp123')
+    
+    if (!newPassword) return
+    
+    if (newPassword.length < 4) {
+      alert('Password must be at least 4 characters long')
+      return
+    }
+
+    try {
+      const { error } = await database.updateEmployee(employee.id, {
+        password: newPassword
+      })
+
+      if (error) throw error
+
+      alert(`Password updated successfully for ${employee.first_name} ${employee.last_name}!\n\nNew Password: ${newPassword}\n\nMake sure to inform the employee of their new password.`)
+      onEmployeesChange() // Refresh the employee list
+    } catch (error) {
+      console.error('Error updating password:', error)
+      alert(`Error updating password: ${error.message}`)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -352,6 +394,24 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
                     {emp.role}
                   </span>
                   <div className="flex space-x-1">
+                    {emp.username && (
+                      <>
+                        <button
+                          onClick={() => showCredentials(emp)}
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
+                          title="Show Login Credentials"
+                        >
+                          👁️
+                        </button>
+                        <button
+                          onClick={() => resetPassword(emp)}
+                          className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
+                          title="Reset Password"
+                        >
+                          🔄
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={() => editEmployee(emp)}
                       className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-xs font-medium transition-colors"

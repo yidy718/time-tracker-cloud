@@ -18,17 +18,28 @@ export default function Auth() {
     try {
       if (loginType === 'employee') {
         // Employee login with username/password
-        const { data: employee, error } = await supabase
+        console.log('Attempting employee login with username:', username)
+        
+        // First check if employee exists with this username
+        const { data: employeeCheck, error: checkError } = await supabase
           .from('employees')
           .select('*')
           .eq('username', username)
-          .eq('password', password)
           .eq('is_active', true)
           .single()
 
-        if (error || !employee) {
-          throw new Error('Invalid username or password')
+        console.log('Employee found:', employeeCheck, 'Error:', checkError)
+
+        if (checkError || !employeeCheck) {
+          throw new Error('Username not found')
         }
+
+        // Then verify password
+        if (employeeCheck.password !== password) {
+          throw new Error('Invalid password')
+        }
+
+        const employee = employeeCheck
 
         // Create a simple session for employee
         localStorage.setItem('employee_session', JSON.stringify({
