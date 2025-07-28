@@ -188,26 +188,26 @@ export default function TimeTracker({ session, employee }) {
       {/* Header */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-blue-600/20"></div>
-        <div className="relative px-6 py-8">
+        <div className="relative px-4 sm:px-6 py-6 sm:py-8">
           <div className="flex justify-between items-start">
-            <div className="flex-1">
+            <div className="flex-1 min-w-0 pr-4">
               <div className="mb-4">
-                <p className="text-white text-2xl font-bold mb-1">{formatDate(currentTime)}</p>
-                <p className="text-white/70 text-lg">{formatTime(currentTime)}</p>
+                <p className="text-white text-xl sm:text-2xl font-bold mb-1">{formatDate(currentTime)}</p>
+                <p className="text-white/70 text-base sm:text-lg">{formatTime(currentTime)}</p>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-lg">
                   {employee.first_name[0]}{employee.last_name[0]}
                 </div>
-                <div>
-                  <span className="text-white/90 font-semibold text-lg">{employee.first_name} {employee.last_name}</span>
+                <div className="min-w-0 flex-1">
+                  <span className="text-white/90 font-semibold text-base sm:text-lg block truncate">{employee.first_name} {employee.last_name}</span>
                   <div className="flex items-center space-x-2 mt-1">
-                    <span className="px-3 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium">{employee.organization?.name}</span>
+                    <span className="px-2 sm:px-3 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium truncate max-w-[150px]">{employee.organization?.name}</span>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="text-right space-y-4">
+            <div className="text-right space-y-3 sm:space-y-4 flex-shrink-0">
               <div className="flex justify-end">
                 <button
                   onClick={() => setShowMenu(!showMenu)}
@@ -228,7 +228,7 @@ export default function TimeTracker({ session, employee }) {
                     className="fixed inset-0 z-[9999]" 
                     onClick={() => setShowMenu(false)}
                   />
-                  <div className="absolute right-0 top-14 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-[10000] transform transition-all duration-300 scale-100 opacity-100">
+                  <div className="absolute right-0 sm:right-0 left-4 sm:left-auto top-14 w-64 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-[10000] transform transition-all duration-300 scale-100 opacity-100">
                     <div className="p-4">
                       <button
                         onClick={() => {
