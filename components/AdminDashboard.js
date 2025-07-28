@@ -86,7 +86,7 @@ export default function AdminDashboard({ session, employee }) {
                     className="fixed inset-0 z-[9999]" 
                     onClick={() => setShowMenu(false)}
                   />
-                  <div className="absolute right-0 sm:right-0 left-4 sm:left-auto top-16 w-64 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-[10000] transform transition-all duration-300 scale-100 opacity-100">
+                  <div className="fixed top-20 right-4 left-4 sm:left-auto sm:right-4 w-auto sm:w-64 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-[10000] transform transition-all duration-300 scale-100 opacity-100">
                     <div className="p-4">
                       <button
                         onClick={() => {
