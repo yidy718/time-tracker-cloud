@@ -53,7 +53,9 @@ export default function TimeTracker({ session, employee }) {
       setCurrentSession(sessionData)
 
       // Load locations
-      const { data: locationsData } = await database.getLocations(employee.organization_id)
+      console.log('Loading locations for organization:', employee.organization_id)
+      const { data: locationsData, error: locationsError } = await database.getLocations(employee.organization_id)
+      console.log('Locations result:', { locationsData, locationsError })
       setLocations(locationsData || [])
 
       // Load total hours for current week
