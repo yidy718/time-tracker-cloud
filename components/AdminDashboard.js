@@ -394,6 +394,9 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
                     {emp.username && (
                       <p className="text-white/50 text-xs">Username: {emp.username}</p>
                     )}
+                    {emp.hourly_rate && (
+                      <p className="text-green-400 text-sm font-mono">${emp.hourly_rate}/hr</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
@@ -406,6 +409,11 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
                     <p className="text-white/60 text-xs mt-1">
                       {emp.is_active ? 'Active' : 'Inactive'}
                     </p>
+                    {emp.hourly_rate && (
+                      <p className="text-green-400 text-xs font-mono mt-1">
+                        ${emp.hourly_rate}/hour
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     {emp.username && (
@@ -761,7 +769,8 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
     firstName: '',
     lastName: '',
     email: '',
-    role: 'employee'
+    role: 'employee',
+    hourlyRate: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -785,7 +794,8 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
         email: formData.email,
         username: username,
         password: defaultPassword,
-        role: formData.role
+        role: formData.role,
+        hourly_rate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null
       }
       
       console.log('Creating employee with data:', employeeData)
@@ -899,6 +909,25 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
             <option value="manager">Manager</option>
             <option value="admin">Admin</option>
           </select>
+        </div>
+
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Hourly Rate (Optional)
+          </label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60">$</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              className="w-full pl-8 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
+              value={formData.hourlyRate}
+              onChange={(e) => setFormData({...formData, hourlyRate: e.target.value})}
+              placeholder="25.00"
+            />
+          </div>
+          <p className="text-white/50 text-xs mt-2">Enter the employee&apos;s hourly wage for payroll calculations</p>
         </div>
 
         <div className="flex space-x-4">

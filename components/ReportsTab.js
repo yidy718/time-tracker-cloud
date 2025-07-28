@@ -78,16 +78,24 @@ export default function ReportsTab({ employees, organizationId }) {
   const generateCSV = () => {
     if (!reportData) return ''
 
-    const headers = ['Employee', 'Date', 'Hours Worked', 'Clock In', 'Clock Out', 'Location', 'Duration (Minutes)']
-    const rows = reportData.map(entry => [
-      `${entry.first_name} ${entry.last_name}`,
-      new Date(entry.clock_in).toLocaleDateString(),
-      formatDuration(entry.duration_minutes || 0),
-      new Date(entry.clock_in).toLocaleTimeString(),
-      entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString() : 'In Progress',
-      entry.location_name || 'N/A',
-      entry.duration_minutes || 0
-    ])
+    const headers = ['Employee', 'Date', 'Hours Worked', 'Clock In', 'Clock Out', 'Location', 'Duration (Minutes)', 'Hourly Rate', 'Total Pay']
+    const rows = reportData.map(entry => {
+      const durationHours = (entry.duration_minutes || 0) / 60
+      const hourlyRate = entry.hourly_rate || 0
+      const totalPay = durationHours * hourlyRate
+      
+      return [
+        `${entry.first_name} ${entry.last_name}`,
+        new Date(entry.clock_in).toLocaleDateString(),
+        formatDuration(entry.duration_minutes || 0),
+        new Date(entry.clock_in).toLocaleTimeString(),
+        entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString() : 'In Progress',
+        entry.location_name || 'N/A',
+        entry.duration_minutes || 0,
+        hourlyRate ? `$${hourlyRate.toFixed(2)}` : 'N/A',
+        hourlyRate ? `$${totalPay.toFixed(2)}` : 'N/A'
+      ]
+    })
 
     const csvContent = [headers, ...rows]
       .map(row => row.map(cell => `"${cell}"`).join(','))
@@ -266,6 +274,11 @@ export default function ReportsTab({ employees, organizationId }) {
                     <p className="text-white/60 text-sm">
                       {new Date(entry.clock_in).toLocaleTimeString()} - {entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString() : 'In Progress'}
                     </p>
+                    {entry.hourly_rate && (
+                      <p className="text-yellow-400 text-sm font-mono mt-1">
+                        ${entry.hourly_rate}/hr • ${((entry.duration_minutes || 0) / 60 * entry.hourly_rate).toFixed(2)} total
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -275,7 +288,7 @@ export default function ReportsTab({ employees, organizationId }) {
           {/* Summary */}
           <div className="mt-8 p-6 bg-white/5 rounded-2xl border border-white/10">
             <h5 className="text-lg font-bold text-white mb-4">📋 Summary</h5>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="text-center">
                 <p className="text-white/60 text-sm">Total Entries</p>
                 <p className="text-2xl font-bold text-white">{reportData.length}</p>
@@ -290,6 +303,16 @@ export default function ReportsTab({ employees, organizationId }) {
                 <p className="text-white/60 text-sm">Avg per Entry</p>
                 <p className="text-2xl font-bold text-blue-400">
                   {formatDuration(reportData.length > 0 ? Math.round(reportData.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0) / reportData.length) : 0)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-white/60 text-sm">Total Payroll</p>
+                <p className="text-2xl font-bold text-yellow-400">
+                  ${reportData.reduce((sum, entry) => {
+                    const durationHours = (entry.duration_minutes || 0) / 60
+                    const rate = entry.hourly_rate || 0
+                    return sum + (durationHours * rate)
+                  }, 0).toFixed(2)}
                 </p>
               </div>
             </div>
