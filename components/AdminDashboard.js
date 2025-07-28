@@ -484,32 +484,46 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
     setError('')
 
     try {
-      // Create auth user first - we'll handle email confirmation through Supabase settings
-      const { data: authData, error: authError } = await auth.signUp(
-        formData.email, 
-        'TempPass123!', // Temporary password - employee should change
-        {
-          data: {
-            full_name: `${formData.firstName} ${formData.lastName}`
-          }
-        }
-      )
-
-      if (authError) throw authError
-
-      // Create employee record
+      // Generate unique username and simple password
+      const username = `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase()}`
+      const defaultPassword = 'emp123' // Simple default password
+      
+      // Create employee record directly (no Supabase Auth needed)
       const { error: empError } = await database.createEmployee({
-        id: authData.user.id,
+        id: crypto.randomUUID(), // Generate a UUID for the employee
         organization_id: organizationId,
         first_name: formData.firstName,
         last_name: formData.lastName,
         email: formData.email,
+        username: username,
+        password: defaultPassword,
         role: formData.role
       })
 
-      if (empError) throw empError
+      if (empError) {
+        // If username already exists, add a number
+        if (empError.message.includes('duplicate key value violates unique constraint')) {
+          const uniqueUsername = `${username}${Math.floor(Math.random() * 1000)}`
+          const { error: retryError } = await database.createEmployee({
+            id: crypto.randomUUID(),
+            organization_id: organizationId,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email,
+            username: uniqueUsername,
+            password: defaultPassword,
+            role: formData.role
+          })
+          if (retryError) throw retryError
+          
+          alert(`Employee added successfully!\n\n👤 Username: ${uniqueUsername}\n🔑 Password: ${defaultPassword}\n\nEmployee can log in immediately using the Employee login option.`)
+        } else {
+          throw empError
+        }
+      } else {
+        alert(`Employee added successfully!\n\n👤 Username: ${username}\n🔑 Password: ${defaultPassword}\n\nEmployee can log in immediately using the Employee login option.`)
+      }
 
-      alert(`Employee added successfully!\n\nLogin Details:\nEmail: ${formData.email}\nTemporary password: TempPass123!\n\nNote: Employee can log in immediately and should change password on first login.`)
       onSuccess()
     } catch (error) {
       console.error('Error adding employee:', error)

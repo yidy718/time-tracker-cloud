@@ -8,14 +8,37 @@ import SuperAdminDashboard from '../components/SuperAdminDashboard'
 export default function Home({ session }) {
   const [employee, setEmployee] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [currentSession, setCurrentSession] = useState(null)
 
   useEffect(() => {
-    if (session?.user) {
-      fetchEmployee()
-    } else {
-      setLoading(false)
-    }
+    checkSession()
   }, [session])
+
+  const checkSession = async () => {
+    // Check for Supabase Auth session (admins)
+    if (session?.user) {
+      setCurrentSession(session)
+      fetchEmployee()
+      return
+    }
+    
+    // Check for employee localStorage session
+    const employeeSessionData = localStorage.getItem('employee_session')
+    if (employeeSessionData) {
+      try {
+        const employeeSession = JSON.parse(employeeSessionData)
+        setCurrentSession(employeeSession)
+        setEmployee(employeeSession.employee)
+        setLoading(false)
+        return
+      } catch (error) {
+        console.error('Invalid employee session:', error)
+        localStorage.removeItem('employee_session')
+      }
+    }
+    
+    setLoading(false)
+  }
 
   const fetchEmployee = async () => {
     try {
@@ -45,7 +68,7 @@ export default function Home({ session }) {
     )
   }
 
-  if (!session) {
+  if (!currentSession) {
     return <Auth />
   }
 
@@ -77,15 +100,15 @@ export default function Home({ session }) {
     if (employee.id === '882247fb-71f2-4d1d-8cfd-f33d8c5a3b0f' || 
         (employee.organization && employee.organization.name && 
          employee.organization.name.toLowerCase().includes('super admin'))) {
-      return <SuperAdminDashboard session={session} employee={employee} />
+      return <SuperAdminDashboard session={currentSession} employee={employee} />
     }
-    return <AdminDashboard session={session} employee={employee} />
+    return <AdminDashboard session={currentSession} employee={employee} />
   }
   
   if (employee.role === 'manager') {
-    return <AdminDashboard session={session} employee={employee} />
+    return <AdminDashboard session={currentSession} employee={employee} />
   }
 
-  return <TimeTracker session={session} employee={employee} />
+  return <TimeTracker session={currentSession} employee={employee} />
 }
 

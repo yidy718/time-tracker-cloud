@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { auth } from '../lib/supabase'
+import { auth, supabase } from '../lib/supabase'
 
 export default function Auth() {
   const [loading, setLoading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [username, setUsername] = useState('')
   const [message, setMessage] = useState('')
+  const [loginType, setLoginType] = useState('admin') // 'admin' or 'employee'
 
   const handleAuth = async (e) => {
     e.preventDefault()
@@ -14,14 +16,39 @@ export default function Auth() {
     setMessage('')
 
     try {
-      let result
-      if (isSignUp) {
-        result = await auth.signUp(email, password)
-        if (result.error) throw result.error
-        setMessage('Check your email for the confirmation link!')
+      if (loginType === 'employee') {
+        // Employee login with username/password
+        const { data: employee, error } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('username', username)
+          .eq('password', password)
+          .eq('is_active', true)
+          .single()
+
+        if (error || !employee) {
+          throw new Error('Invalid username or password')
+        }
+
+        // Create a simple session for employee
+        localStorage.setItem('employee_session', JSON.stringify({
+          user: { id: employee.id, email: employee.email },
+          employee: employee
+        }))
+        
+        // Trigger page refresh to load employee interface
+        window.location.reload()
       } else {
-        result = await auth.signIn(email, password)
-        if (result.error) throw result.error
+        // Admin login with email/password (Supabase Auth)
+        let result
+        if (isSignUp) {
+          result = await auth.signUp(email, password)
+          if (result.error) throw result.error
+          setMessage('Check your email for the confirmation link!')
+        } else {
+          result = await auth.signIn(email, password)
+          if (result.error) throw result.error
+        }
       }
     } catch (error) {
       setMessage(error.message)
@@ -40,20 +67,63 @@ export default function Auth() {
         </div>
 
         <form onSubmit={handleAuth} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
-            </label>
-            <input
-              type="email"
-              required
-              className="input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              autoComplete="email"
-            />
+          {/* Login Type Selector */}
+          <div className="flex space-x-2 p-1 bg-gray-100 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setLoginType('admin')}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                loginType === 'admin'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              👤 Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginType('employee')}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                loginType === 'employee'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              👷 Employee
+            </button>
           </div>
+
+          {loginType === 'admin' ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                className="input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                autoComplete="email"
+              />
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Username
+              </label>
+              <input
+                type="text"
+                required
+                className="input"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                autoComplete="username"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -95,7 +165,10 @@ export default function Auth() {
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-500">
-            Employee? Contact your administrator for login credentials
+            {loginType === 'admin' 
+              ? 'Employee? Switch to Employee login above' 
+              : 'Admin? Switch to Admin login above'
+            }
           </p>
         </div>
 
