@@ -95,11 +95,33 @@ export default function Home({ session }) {
   }
 
   // Route based on user role and organization
+  // Add safety check for employee data
+  if (!employee || !employee.role) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="card-glass max-w-md w-full text-center">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold text-white mb-4">Invalid Employee Data</h1>
+          <p className="text-white/80 mb-6">
+            There's an issue with your employee data. Please contact your administrator.
+          </p>
+          <button
+            onClick={() => {
+              localStorage.removeItem('employee_session')
+              window.location.reload()
+            }}
+            className="btn-primary w-full"
+          >
+            Sign Out & Refresh
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (employee.role === 'admin') {
-    // Check if this is the super admin (specific user ID or super admin org)
-    if (employee.id === '882247fb-71f2-4d1d-8cfd-f33d8c5a3b0f' || 
-        (employee.organization && employee.organization.name && 
-         employee.organization.name.toLowerCase().includes('super admin'))) {
+    // Check if this is the super admin (specific user ID only for safety)
+    if (employee.id === '882247fb-71f2-4d1d-8cfd-f33d8c5a3b0f') {
       return <SuperAdminDashboard session={currentSession} employee={employee} />
     }
     return <AdminDashboard session={currentSession} employee={employee} />
