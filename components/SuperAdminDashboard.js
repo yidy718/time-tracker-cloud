@@ -494,32 +494,30 @@ function EditCompanyModal({ company, onClose, onComplete }) {
       return
     }
 
-    if (!confirm(`Reset password for ${manager.first_name} ${manager.last_name}? They will need to sign in with the new temporary password.`)) {
+    if (!confirm(`Send password reset email to ${manager.first_name} ${manager.last_name} (${manager.email})?`)) {
       return
     }
 
     setLoading(true)
     try {
-      // Generate a temporary password
-      const tempPassword = 'TempManager123!'
-      
-      // Update the password in the auth system
-      const { error: authError } = await supabase.auth.admin.updateUserById(
-        manager.id,
-        { password: tempPassword }
-      )
+      // Use Supabase's password reset email functionality
+      const { error } = await supabase.auth.resetPasswordForEmail(manager.email, {
+        redirectTo: `${window.location.origin}/`
+      })
 
-      if (authError) {
-        // If admin API fails, try regular password update
-        console.log('Admin update failed, trying regular update:', authError)
-        throw new Error('Password reset functionality requires admin privileges. Please contact system administrator.')
-      }
+      if (error) throw error
 
-      alert(`Password reset successfully!\n\nNew temporary password: ${tempPassword}\n\nPlease provide this to ${manager.first_name} ${manager.last_name} and ask them to change it after their next login.`)
+      alert(`✅ Password reset email sent successfully!\n\nA password reset link has been sent to:\n${manager.email}\n\nThe manager can click the link in their email to set a new password.`)
       
     } catch (error) {
-      console.error('Error resetting password:', error)
-      alert(`Error resetting password: ${error.message}`)
+      console.error('Error sending reset email:', error)
+      
+      // If email reset fails, provide manual alternative
+      if (error.message.includes('rate limit') || error.message.includes('too many requests')) {
+        alert(`⚠️ Rate limit reached. Please wait a few minutes before trying again.\n\nAlternatively, you can manually update the manager's password in your Supabase dashboard:\n1. Go to Authentication > Users\n2. Find ${manager.email}\n3. Click "Reset Password" or "Send Magic Link"`)
+      } else {
+        alert(`❌ Error sending reset email: ${error.message}\n\nAlternative solution:\n1. Ask the manager to use "Forgot Password" on the login page\n2. Or manually reset in Supabase Dashboard > Authentication > Users`)
+      }
     }
     setLoading(false)
   }
@@ -679,10 +677,10 @@ function EditCompanyModal({ company, onClose, onComplete }) {
                         disabled={loading}
                         className="bg-gradient-to-r from-orange-500 to-red-600 text-white px-6 py-3 rounded-xl font-medium hover:from-orange-600 hover:to-red-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loading ? 'Resetting...' : '🔑 Reset Password'}
+                        {loading ? 'Sending Email...' : '📧 Send Password Reset'}
                       </button>
                       <p className="text-green-600 text-sm mt-2">
-                        This will generate a new temporary password for the manager
+                        This will send a password reset email to the manager
                       </p>
                     </div>
                   </div>
