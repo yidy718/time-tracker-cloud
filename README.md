@@ -145,18 +145,64 @@ npx expo start
 
 ## 🚀 Deployment
 
-### Web Application
+### Production Deployment
+The application is deployed and running on **Vercel**:
+
+🌐 **Live Application**: [https://time-tracker-cloud-od7pz0oy7-yidys-projects.vercel.app](https://time-tracker-cloud-od7pz0oy7-yidys-projects.vercel.app)
+
+### Deploy Your Own Instance
+
+#### Option 1: Deploy to Vercel (Recommended)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/git/external?repository-url=https://github.com/yidy718/time-tracker-cloud)
+
+1. Connect your GitHub repository to Vercel
+2. Add environment variables in Vercel dashboard:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+3. Deploy automatically on every push to main branch
+
+#### Option 2: Manual Deployment
 ```bash
+# Build for production
 npm run build
+
+# Start production server
 npm start
-# Or deploy to Vercel/Netlify
+
+# Or deploy to any hosting platform
+npm run export  # For static export
 ```
 
 ### Mobile Application
 ```bash
 cd mobile-app
 expo build:android  # or :ios
+# Deploy to App Store/Google Play
 ```
+
+### Continuous Deployment
+- **GitHub Integration**: Automatic deployments on push to `main` branch
+- **Environment Variables**: Managed through Vercel dashboard
+- **Build Optimization**: Next.js optimized builds with Vercel
+- **Global CDN**: Fast worldwide content delivery
+
+## 📊 Live Deployment Status
+
+### Current Production Environment
+- **Platform**: Vercel
+- **Supabase Project**: `xzjrqtjmaahulpmtwimw.supabase.co`
+- **Domain**: Custom Vercel deployment URL
+- **Branch**: `main` (auto-deploy enabled)
+- **Build Status**: ✅ Deployed successfully
+- **Last Updated**: January 2025
+
+### Features Currently Live
+- ✅ Multi-tenant authentication system
+- ✅ Employee time tracking interface
+- ✅ Admin dashboard with real-time data
+- ✅ Super admin company management
+- ✅ Mobile-responsive design
+- ✅ Supabase real-time synchronization
 
 ## 🔧 Configuration
 
