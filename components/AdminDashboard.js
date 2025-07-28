@@ -124,6 +124,7 @@ export default function AdminDashboard({ session, employee }) {
             {[
               { id: 'dashboard', name: 'Dashboard', emoji: '📊', color: 'from-blue-500 to-purple-600' },
               { id: 'reports', name: 'Reports', emoji: '📈', color: 'from-purple-500 to-pink-600' },
+              { id: 'timemanagement', name: 'Time Mgmt', emoji: '⏰', color: 'from-red-500 to-orange-600' },
               { id: 'employees', name: 'Employees', emoji: '👥', color: 'from-orange-500 to-red-600' },
               { id: 'locations', name: 'Locations', emoji: '📍', color: 'from-green-500 to-blue-600' },
               { id: 'projects', name: 'Projects', emoji: '💼', color: 'from-indigo-500 to-purple-600' },
@@ -158,6 +159,15 @@ export default function AdminDashboard({ session, employee }) {
           <ReportsTab 
             employees={employees}
             organizationId={employee.organization_id}
+          />
+        )}
+
+        {activeTab === 'timemanagement' && (
+          <TimeManagementTab 
+            employees={employees}
+            locations={locations}
+            organizationId={employee.organization_id}
+            onDataChange={loadData}
           />
         )}
         
@@ -1630,6 +1640,610 @@ function PasswordChangeModal({ onClose }) {
             </div>
           </form>
         )}
+      </div>
+    </div>
+  )
+}
+
+function TimeManagementTab({ employees, locations, organizationId, onDataChange }) {
+  const [timeSessions, setTimeSessions] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [selectedSession, setSelectedSession] = useState(null)
+
+  // Set default dates (current week)
+  useEffect(() => {
+    const now = new Date()
+    const startOfWeek = new Date(now)
+    // Get Monday as start of week
+    const dayOfWeek = now.getDay()
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    startOfWeek.setDate(now.getDate() - daysFromMonday)
+    startOfWeek.setHours(0, 0, 0, 0)
+    
+    const endOfWeek = new Date(startOfWeek)
+    endOfWeek.setDate(startOfWeek.getDate() + 6)
+    endOfWeek.setHours(23, 59, 59, 999)
+    
+    setStartDate(startOfWeek.toISOString().split('T')[0])
+    setEndDate(endOfWeek.toISOString().split('T')[0])
+  }, [])
+
+  const loadTimeSessions = async () => {
+    if (!startDate || !endDate) return
+    
+    setLoading(true)
+    try {
+      const { data, error } = await database.getAllTimeSessions(organizationId, startDate, endDate)
+      if (error) throw error
+      setTimeSessions(data || [])
+    } catch (error) {
+      console.error('Error loading time sessions:', error)
+      alert('Error loading time sessions. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    loadTimeSessions()
+  }, [startDate, endDate, organizationId])
+
+  const formatDuration = (clockIn, clockOut) => {
+    if (!clockIn || !clockOut) return '0h 0m'
+    const start = new Date(clockIn)
+    const end = new Date(clockOut)
+    const diff = end - start
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    return `${hours}h ${minutes}m`
+  }
+
+  const handleEdit = (session) => {
+    setSelectedSession(session)
+    setShowEditModal(true)
+  }
+
+  const handleDelete = (session) => {
+    setSelectedSession(session)
+    setShowDeleteModal(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!selectedSession) return
+    
+    try {
+      const { error } = await database.deleteTimeSession(selectedSession.id)
+      if (error) throw error
+      
+      setShowDeleteModal(false)
+      setSelectedSession(null)
+      await loadTimeSessions()
+      onDataChange()
+      alert('Time entry deleted successfully!')
+    } catch (error) {
+      console.error('Error deleting time session:', error)
+      alert('Error deleting time entry. Please try again.')
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
+        <div className="flex items-center space-x-3 mb-8">
+          <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+            ⏰
+          </div>
+          <h3 className="text-2xl font-bold text-white">Time Management</h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <label className="block text-white/80 font-medium mb-3">
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300"
+            />
+          </div>
+
+          <div>
+            <label className="block text-white/80 font-medium mb-3">
+              End Date
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300"
+            />
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-300 hover:scale-105 shadow-lg w-full"
+            >
+              ➕ Add Entry
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Time Sessions List */}
+      <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
+        <h4 className="text-xl font-bold text-white mb-6">Time Entries ({timeSessions.length})</h4>
+        
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-white/70">Loading time sessions...</p>
+          </div>
+        ) : timeSessions.length > 0 ? (
+          <div className="space-y-4">
+            {timeSessions.map((session) => (
+              <div 
+                key={session.id} 
+                className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                      {session.first_name[0]}{session.last_name[0]}
+                    </div>
+                    <div>
+                      <p className="font-bold text-xl text-white">{session.first_name} {session.last_name}</p>
+                      <p className="text-white/70 text-sm">
+                        {new Date(session.clock_in).toLocaleDateString()} • {session.location_name}
+                      </p>
+                      <p className="text-white/60 text-xs">
+                        {new Date(session.clock_in).toLocaleTimeString()} - {session.clock_out ? new Date(session.clock_out).toLocaleTimeString() : 'In Progress'}
+                      </p>
+                      {session.notes && (
+                        <p className="text-blue-300 text-xs mt-1 bg-white/5 rounded p-2 border border-white/10">
+                          📝 {session.notes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="text-right">
+                      <p className="font-mono text-2xl font-bold text-green-400">
+                        {formatDuration(session.clock_in, session.clock_out)}
+                      </p>
+                      <p className="text-white/60 text-sm">
+                        {session.clock_out ? 'Completed' : 'Active'}
+                      </p>
+                    </div>
+                    <div className="flex flex-col space-y-2">
+                      <button
+                        onClick={() => handleEdit(session)}
+                        className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg text-sm"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(session)}
+                        className="bg-gradient-to-r from-red-500 to-pink-600 text-white px-4 py-2 rounded-lg font-medium hover:from-red-600 hover:to-pink-700 transition-all duration-300 hover:scale-105 shadow-lg text-sm"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">📭</div>
+            <p className="text-white/70 text-lg">No time entries found for selected period</p>
+            <p className="text-white/50 text-sm mt-2">Try adjusting the date range or add a new entry</p>
+          </div>
+        )}
+      </div>
+
+      {/* Edit Modal */}
+      {showEditModal && selectedSession && (
+        <EditTimeModal
+          session={selectedSession}
+          employees={employees}
+          locations={locations}
+          onSave={async (updatedSession) => {
+            try {
+              const { error } = await database.updateTimeSession(selectedSession.id, updatedSession)
+              if (error) throw error
+              setShowEditModal(false)
+              setSelectedSession(null)
+              await loadTimeSessions()
+              onDataChange()
+              alert('Time entry updated successfully!')
+            } catch (error) {
+              console.error('Error updating time session:', error)
+              alert('Error updating time entry. Please try again.')
+            }
+          }}
+          onCancel={() => {
+            setShowEditModal(false)
+            setSelectedSession(null)
+          }}
+        />
+      )}
+
+      {/* Add Modal */}
+      {showAddModal && (
+        <AddTimeModal
+          employees={employees}
+          locations={locations}
+          onSave={async (newSession) => {
+            try {
+              const { error } = await database.createTimeSession(newSession)
+              if (error) throw error
+              setShowAddModal(false)
+              await loadTimeSessions()
+              onDataChange()
+              alert('Time entry added successfully!')
+            } catch (error) {
+              console.error('Error creating time session:', error)
+              alert('Error adding time entry. Please try again.')
+            }
+          }}
+          onCancel={() => setShowAddModal(false)}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedSession && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20">
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+                  🗑️
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800">Delete Time Entry</h3>
+              </div>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <p className="text-gray-700">
+                Are you sure you want to delete this time entry for <strong>{selectedSession.first_name} {selectedSession.last_name}</strong>?
+              </p>
+              <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                <p className="text-red-800 text-sm">
+                  <strong>Warning:</strong> This action cannot be undone. The time entry will be permanently removed.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={confirmDelete}
+                  className="bg-gradient-to-r from-red-500 to-pink-600 text-white py-3 rounded-xl font-medium hover:from-red-600 hover:to-pink-700 transition-all duration-300 hover:scale-105 shadow-lg"
+                >
+                  🗑️ Delete
+                </button>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200 transition-all duration-300"
+                >
+                  ❌ Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EditTimeModal({ session, employees, locations, onSave, onCancel }) {
+  const [formData, setFormData] = useState({
+    employee_id: session.employee_id,
+    location_id: session.location_id || '',
+    clock_in: new Date(session.clock_in).toISOString().slice(0, 16),
+    clock_out: session.clock_out ? new Date(session.clock_out).toISOString().slice(0, 16) : '',
+    notes: session.notes || ''
+  })
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+
+    const updatedSession = {
+      employee_id: formData.employee_id,
+      location_id: formData.location_id || null,
+      clock_in: new Date(formData.clock_in).toISOString(),
+      clock_out: formData.clock_out ? new Date(formData.clock_out).toISOString() : null,
+      notes: formData.notes || null
+    }
+
+    await onSave(updatedSession)
+    setLoading(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+              ✏️
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800">Edit Time Entry</h3>
+          </div>
+          <button
+            onClick={onCancel}
+            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-gray-700 font-medium mb-3">
+              👤 Employee
+            </label>
+            <select
+              value={formData.employee_id}
+              onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+              required
+            >
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.first_name} {emp.last_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-3">
+              📍 Location
+            </label>
+            <select
+              value={formData.location_id}
+              onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+            >
+              <option value="">Select location</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-3">
+              🕘 Clock In
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.clock_in}
+              onChange={(e) => setFormData({ ...formData, clock_in: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-3">
+              🕘 Clock Out (optional)
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.clock_out}
+              onChange={(e) => setFormData({ ...formData, clock_out: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-3">
+              📝 Notes (optional)
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 resize-none"
+              rows="3"
+              placeholder="Work notes or memo..."
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Saving...</span>
+                </span>
+              ) : (
+                '💾 Save Changes'
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={loading}
+              className="bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200 transition-all duration-300 disabled:opacity-50"
+            >
+              ❌ Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function AddTimeModal({ employees, locations, onSave, onCancel }) {
+  const [formData, setFormData] = useState({
+    employee_id: '',
+    location_id: '',
+    clock_in: '',
+    clock_out: '',
+    notes: ''
+  })
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+
+    const newSession = {
+      employee_id: formData.employee_id,
+      location_id: formData.location_id || null,
+      clock_in: new Date(formData.clock_in).toISOString(),
+      clock_out: formData.clock_out ? new Date(formData.clock_out).toISOString() : null,
+      notes: formData.notes || null
+    }
+
+    await onSave(newSession)
+    setLoading(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+              ➕
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800">Add Time Entry</h3>
+          </div>
+          <button
+            onClick={onCancel}
+            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-gray-700 font-medium mb-3">
+              👤 Employee
+            </label>
+            <select
+              value={formData.employee_id}
+              onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
+              required
+            >
+              <option value="">Select employee</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.first_name} {emp.last_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-3">
+              📍 Location
+            </label>
+            <select
+              value={formData.location_id}
+              onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
+            >
+              <option value="">Select location</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-3">
+              🕘 Clock In
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.clock_in}
+              onChange={(e) => setFormData({ ...formData, clock_in: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-3">
+              🕘 Clock Out (optional)
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.clock_out}
+              onChange={(e) => setFormData({ ...formData, clock_out: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-3">
+              📝 Notes (optional)
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300 resize-none"
+              rows="3"
+              placeholder="Work notes or memo..."
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              type="submit"
+              disabled={loading || !formData.employee_id || !formData.clock_in}
+              className="bg-gradient-to-r from-green-500 to-blue-600 text-white py-3 rounded-xl font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Adding...</span>
+                </span>
+              ) : (
+                '➕ Add Entry'
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={loading}
+              className="bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200 transition-all duration-300 disabled:opacity-50"
+            >
+              ❌ Cancel
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
