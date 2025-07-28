@@ -17,35 +17,6 @@ export default function TimeTracker({ session, employee }) {
   const [showWeeklyActivities, setShowWeeklyActivities] = useState(false)
   const [weeklyActivities, setWeeklyActivities] = useState([])
 
-  const loadData = useCallback(async () => {
-    try {
-      // Load current session
-      const { data: sessionData } = await database.getCurrentSession(employee.id)
-      setCurrentSession(sessionData)
-
-      // Load locations
-      const { data: locationsData } = await database.getLocations(employee.organization_id)
-      setLocations(locationsData || [])
-
-      // Load total hours for current week
-      await loadTotalHours()
-    } catch (error) {
-      console.error('Error loading data:', error)
-    }
-  }, [employee.id, employee.organization_id, loadTotalHours])
-
-  useEffect(() => {
-    // Update current time every second
-    const timer = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 1000)
-
-    // Load initial data
-    loadData()
-
-    return () => clearInterval(timer)
-  }, [loadData])
-
   const loadTotalHours = useCallback(async () => {
     try {
       const now = new Date()
@@ -74,6 +45,35 @@ export default function TimeTracker({ session, employee }) {
       console.error('Error loading total hours:', error)
     }
   }, [employee.organization_id, employee.id])
+
+  const loadData = useCallback(async () => {
+    try {
+      // Load current session
+      const { data: sessionData } = await database.getCurrentSession(employee.id)
+      setCurrentSession(sessionData)
+
+      // Load locations
+      const { data: locationsData } = await database.getLocations(employee.organization_id)
+      setLocations(locationsData || [])
+
+      // Load total hours for current week
+      await loadTotalHours()
+    } catch (error) {
+      console.error('Error loading data:', error)
+    }
+  }, [employee.id, employee.organization_id, loadTotalHours])
+
+  useEffect(() => {
+    // Update current time every second
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+
+    // Load initial data
+    loadData()
+
+    return () => clearInterval(timer)
+  }, [loadData])
 
   const handleClockIn = async () => {
     if (!selectedLocation) {
