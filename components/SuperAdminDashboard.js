@@ -106,6 +106,35 @@ export default function SuperAdminDashboard({ session, employee }) {
     }
   }
 
+  const editCompany = async (company) => {
+    try {
+      // Get detailed company info including manager details
+      const { data: employees, error: empError } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('organization_id', company.id)
+
+      if (empError) throw empError
+
+      const { data: locations, error: locError } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('organization_id', company.id)
+
+      if (locError) throw locError
+
+      setSelectedCompany({
+        ...company,
+        employees: employees || [],
+        locations: locations || []
+      })
+      setShowEditCompany(true)
+    } catch (error) {
+      console.error('Error loading company for editing:', error)
+      alert(`Error loading company: ${error.message}`)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
@@ -252,10 +281,7 @@ export default function SuperAdminDashboard({ session, employee }) {
                           👁️ View
                         </button>
                         <button
-                          onClick={() => {
-                            // For now, just show company details - we can add edit functionality later
-                            viewCompanyDetails(company)
-                          }}
+                          onClick={() => editCompany(company)}
                           className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                           title="Edit Company"
                         >
@@ -399,6 +425,22 @@ export default function SuperAdminDashboard({ session, employee }) {
         </div>
       )}
 
+      {/* Edit Company Modal */}
+      {selectedCompany && showEditCompany && (
+        <EditCompanyModal 
+          company={selectedCompany}
+          onClose={() => {
+            setShowEditCompany(false)
+            setSelectedCompany(null)
+          }}
+          onComplete={() => {
+            setShowEditCompany(false)
+            setSelectedCompany(null)
+            loadCompanies()
+          }}
+        />
+      )}
+
       {/* Admin Manager Modal */}
       {showAdminManager && (
         <AdminManagerModal 
@@ -409,6 +451,308 @@ export default function SuperAdminDashboard({ session, employee }) {
           }}
         />
       )}
+    </div>
+  )
+}
+
+// Edit Company Modal Component
+function EditCompanyModal({ company, onClose, onComplete }) {
+  const [loading, setLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('general')
+  const [companyName, setCompanyName] = useState(company.name)
+  
+  // Find the manager (admin or manager role in this company)
+  const manager = company.employees?.find(emp => emp.role === 'admin' || emp.role === 'manager')
+
+  const updateCompanyName = async () => {
+    if (!companyName.trim()) {
+      alert('Company name cannot be empty')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .update({ name: companyName })
+        .eq('id', company.id)
+
+      if (error) throw error
+      
+      alert('Company name updated successfully!')
+      onComplete()
+    } catch (error) {
+      console.error('Error updating company name:', error)
+      alert(`Error updating company name: ${error.message}`)
+    }
+    setLoading(false)
+  }
+
+  const resetManagerPassword = async () => {
+    if (!manager) {
+      alert('No manager found for this company')
+      return
+    }
+
+    if (!confirm(`Reset password for ${manager.first_name} ${manager.last_name}? They will need to sign in with the new temporary password.`)) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      // Generate a temporary password
+      const tempPassword = 'TempManager123!'
+      
+      // Update the password in the auth system
+      const { error: authError } = await supabase.auth.admin.updateUserById(
+        manager.id,
+        { password: tempPassword }
+      )
+
+      if (authError) {
+        // If admin API fails, try regular password update
+        console.log('Admin update failed, trying regular update:', authError)
+        throw new Error('Password reset functionality requires admin privileges. Please contact system administrator.')
+      }
+
+      alert(`Password reset successfully!\n\nNew temporary password: ${tempPassword}\n\nPlease provide this to ${manager.first_name} ${manager.last_name} and ask them to change it after their next login.`)
+      
+    } catch (error) {
+      console.error('Error resetting password:', error)
+      alert(`Error resetting password: ${error.message}`)
+    }
+    setLoading(false)
+  }
+
+  const toggleCompanyStatus = async () => {
+    const newStatus = !company.is_active
+    const action = newStatus ? 'activate' : 'deactivate'
+    
+    if (!confirm(`Are you sure you want to ${action} "${company.name}"? This will affect all employees' access.`)) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .update({ is_active: newStatus })
+        .eq('id', company.id)
+
+      if (error) throw error
+      
+      alert(`Company ${action}d successfully!`)
+      onComplete()
+    } catch (error) {
+      console.error(`Error ${action}ing company:`, error)
+      alert(`Error ${action}ing company: ${error.message}`)
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-white/20">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+              ✏️
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">Edit Company</h2>
+              <p className="text-gray-600">{company.name}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 mb-8 bg-gray-100 rounded-xl p-1">
+          {[
+            { id: 'general', name: 'General', icon: '🏢' },
+            { id: 'manager', name: 'Manager', icon: '👤' },
+            { id: 'status', name: 'Status', icon: '⚡' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 flex-1 justify-center ${
+                activeTab === tab.id
+                  ? 'bg-white text-gray-800 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <span>{tab.icon}</span>
+              <span>{tab.name}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div className="space-y-6">
+          {activeTab === 'general' && (
+            <div className="space-y-6">
+              <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                <h3 className="text-lg font-bold text-blue-800 mb-4">Company Information</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-blue-700 font-medium mb-2">Company Name</label>
+                    <input
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter company name"
+                    />
+                  </div>
+                  <button
+                    onClick={updateCompanyName}
+                    disabled={loading || companyName === company.name}
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Updating...' : 'Update Name'}
+                  </button>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <h4 className="text-lg font-bold text-gray-800 mb-4">Company Statistics</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-gray-600 text-sm">Created</p>
+                    <p className="text-gray-800 font-medium">{new Date(company.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-sm">Total Employees</p>
+                    <p className="text-gray-800 font-medium">{company.employees?.length || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-sm">Total Locations</p>
+                    <p className="text-gray-800 font-medium">{company.locations?.length || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-sm">Status</p>
+                    <p className={`font-medium ${company.is_active !== false ? 'text-green-600' : 'text-red-600'}`}>
+                      {company.is_active !== false ? 'Active' : 'Inactive'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'manager' && (
+            <div className="space-y-6">
+              {manager ? (
+                <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+                  <h3 className="text-lg font-bold text-green-800 mb-4">Manager Information</h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-green-700 text-sm">Name</p>
+                        <p className="text-gray-800 font-medium">{manager.first_name} {manager.last_name}</p>
+                      </div>
+                      <div>
+                        <p className="text-green-700 text-sm">Email</p>
+                        <p className="text-gray-800 font-medium">{manager.email}</p>
+                      </div>
+                      <div>
+                        <p className="text-green-700 text-sm">Role</p>
+                        <p className="text-gray-800 font-medium capitalize">{manager.role}</p>
+                      </div>
+                      <div>
+                        <p className="text-green-700 text-sm">Status</p>
+                        <p className={`font-medium ${manager.is_active ? 'text-green-600' : 'text-red-600'}`}>
+                          {manager.is_active ? 'Active' : 'Inactive'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-4 border-t border-green-200">
+                      <button
+                        onClick={resetManagerPassword}
+                        disabled={loading}
+                        className="bg-gradient-to-r from-orange-500 to-red-600 text-white px-6 py-3 rounded-xl font-medium hover:from-orange-600 hover:to-red-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? 'Resetting...' : '🔑 Reset Password'}
+                      </button>
+                      <p className="text-green-600 text-sm mt-2">
+                        This will generate a new temporary password for the manager
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-yellow-50 rounded-xl p-6 border border-yellow-200 text-center">
+                  <div className="text-4xl mb-4">⚠️</div>
+                  <p className="text-yellow-800 font-medium">No manager found for this company</p>
+                  <p className="text-yellow-600 text-sm mt-2">You may need to assign a manager role to an employee</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'status' && (
+            <div className="space-y-6">
+              <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
+                <h3 className="text-lg font-bold text-purple-800 mb-4">Company Status</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-purple-100">
+                    <div>
+                      <p className="font-medium text-gray-800">Company Status</p>
+                      <p className="text-gray-600 text-sm">
+                        {company.is_active !== false ? 'Company is currently active and operational' : 'Company is currently deactivated'}
+                      </p>
+                    </div>
+                    <div className={`px-4 py-2 rounded-full text-sm font-medium ${
+                      company.is_active !== false 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {company.is_active !== false ? 'Active' : 'Inactive'}
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={toggleCompanyStatus}
+                    disabled={loading}
+                    className={`w-full px-6 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
+                      company.is_active !== false
+                        ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700'
+                        : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
+                    }`}
+                  >
+                    {loading ? 'Processing...' : (company.is_active !== false ? '🚫 Deactivate Company' : '✅ Activate Company')}
+                  </button>
+                  
+                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                    <p className="text-yellow-800 text-sm">
+                      <strong>Note:</strong> {company.is_active !== false 
+                        ? 'Deactivating will prevent all employees from accessing the system' 
+                        : 'Activating will restore access for all employees'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

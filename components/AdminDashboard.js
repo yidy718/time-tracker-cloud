@@ -6,6 +6,7 @@ export default function AdminDashboard({ session, employee }) {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [employees, setEmployees] = useState([])
   const [locations, setLocations] = useState([])
+  const [clientProjects, setClientProjects] = useState([])
   const [activeSessions, setActiveSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [showPasswordChange, setShowPasswordChange] = useState(false)
@@ -13,14 +14,16 @@ export default function AdminDashboard({ session, employee }) {
 
   const loadData = useCallback(async () => {
     try {
-      const [employeesData, locationsData, activeSessionsData] = await Promise.all([
+      const [employeesData, locationsData, clientProjectsData, activeSessionsData] = await Promise.all([
         database.getEmployees(employee.organization_id),
         database.getLocations(employee.organization_id),
+        database.getClientProjects(employee.organization_id),
         database.getActiveSessions(employee.organization_id)
       ])
 
       setEmployees(employeesData.data || [])
       setLocations(locationsData.data || [])
+      setClientProjects(clientProjectsData.data || [])
       setActiveSessions(activeSessionsData.data || [])
     } catch (error) {
       console.error('Error loading admin data:', error)
@@ -123,6 +126,7 @@ export default function AdminDashboard({ session, employee }) {
               { id: 'reports', name: 'Reports', emoji: '📈', color: 'from-purple-500 to-pink-600' },
               { id: 'employees', name: 'Employees', emoji: '👥', color: 'from-orange-500 to-red-600' },
               { id: 'locations', name: 'Locations', emoji: '📍', color: 'from-green-500 to-blue-600' },
+              { id: 'projects', name: 'Projects', emoji: '💼', color: 'from-indigo-500 to-purple-600' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -169,6 +173,14 @@ export default function AdminDashboard({ session, employee }) {
           <LocationsTab 
             locations={locations}
             onLocationsChange={loadData}
+            organizationId={employee.organization_id}
+          />
+        )}
+        
+        {activeTab === 'projects' && (
+          <ClientProjectsTab 
+            clientProjects={clientProjects}
+            onClientProjectsChange={loadData}
             organizationId={employee.organization_id}
           />
         )}
@@ -1100,6 +1112,365 @@ function EditEmployeeForm({ employee, organizationId, onSuccess, onCancel }) {
             className="bg-gradient-to-r from-yellow-500 to-orange-600 text-white py-3 px-6 rounded-xl font-medium hover:from-yellow-600 hover:to-orange-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-1"
           >
             {loading ? 'Updating Employee...' : 'Update Employee'}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="bg-white/10 text-white py-3 px-6 rounded-xl font-medium hover:bg-white/20 transition-all duration-300 flex-1"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function ClientProjectsTab({ clientProjects, onClientProjectsChange, organizationId }) {
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [showEditForm, setShowEditForm] = useState(false)
+  const [selectedProject, setSelectedProject] = useState(null)
+
+  const editProject = (project) => {
+    setSelectedProject(project)
+    setShowEditForm(true)
+  }
+
+  const deleteProject = async (projectId, projectName) => {
+    if (!confirm(`Are you sure you want to delete "${projectName}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const { error } = await database.deleteClientProject(projectId)
+      if (error) throw error
+      
+      alert(`Project "${projectName}" has been deleted successfully.`)
+      onClientProjectsChange() // Refresh the list
+    } catch (error) {
+      console.error('Error deleting project:', error)
+      alert(`Error deleting project: ${error.message}`)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold text-white">Client Projects</h3>
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 hover:scale-105 shadow-lg"
+        >
+          Add Project
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {clientProjects.length > 0 ? (
+          clientProjects.map((project, index) => (
+            <div 
+              key={project.id} 
+              className="group bg-white/10 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-[1.02]"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+                <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-2xl flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-lg flex-shrink-0">
+                    💼
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-lg sm:text-xl text-white truncate">{project.project_name}</p>
+                    <p className="text-white/70 text-sm truncate">{project.client_name}</p>
+                    <div className="flex items-center space-x-3 mt-1">
+                      {project.project_code && (
+                        <span className="px-2 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium">
+                          {project.project_code}
+                        </span>
+                      )}
+                      {project.billing_rate && (
+                        <span className="px-2 py-1 bg-green-500/20 rounded-full text-xs text-green-400 font-medium">
+                          ${project.billing_rate}/hr
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                  <button
+                    onClick={() => editProject(project)}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
+                    title="Edit Project"
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    onClick={() => deleteProject(project.id, project.project_name)}
+                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
+                    title="Delete Project"
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20 text-center">
+            <div className="text-6xl mb-4">💼</div>
+            <p className="text-white/60 text-lg">No client projects added yet</p>
+            <p className="text-white/40 text-sm mt-2">Click &quot;Add Project&quot; to get started</p>
+          </div>
+        )}
+      </div>
+
+      {showAddForm && (
+        <AddClientProjectForm
+          organizationId={organizationId}
+          onSuccess={() => {
+            setShowAddForm(false)
+            onClientProjectsChange()
+          }}
+          onCancel={() => setShowAddForm(false)}
+        />
+      )}
+
+      {showEditForm && selectedProject && (
+        <EditClientProjectForm
+          project={selectedProject}
+          onSuccess={() => {
+            setShowEditForm(false)
+            setSelectedProject(null)
+            onClientProjectsChange()
+          }}
+          onCancel={() => {
+            setShowEditForm(false)
+            setSelectedProject(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function AddClientProjectForm({ organizationId, onSuccess, onCancel }) {
+  const [formData, setFormData] = useState({
+    clientName: '',
+    projectName: '',
+    projectCode: '',
+    billingRate: ''
+  })
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const { error } = await database.createClientProject({
+        organization_id: organizationId,
+        client_name: formData.clientName,
+        project_name: formData.projectName,
+        project_code: formData.projectCode,
+        billing_rate: formData.billingRate ? parseFloat(formData.billingRate) : null
+      })
+
+      if (error) throw error
+      onSuccess()
+    } catch (error) {
+      console.error('Error adding client project:', error)
+      alert('Error adding client project. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
+      <h4 className="text-xl font-bold text-white mb-6">Add New Client Project</h4>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Client Name *
+          </label>
+          <input
+            type="text"
+            required
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+            value={formData.clientName}
+            onChange={(e) => setFormData({...formData, clientName: e.target.value})}
+            placeholder="e.g., ABC Corporation, XYZ Inc"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Project Name *
+          </label>
+          <input
+            type="text"
+            required
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+            value={formData.projectName}
+            onChange={(e) => setFormData({...formData, projectName: e.target.value})}
+            placeholder="e.g., Website Redesign, Mobile App"
+          />
+        </div>
+
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Project Code (Optional)
+          </label>
+          <input
+            type="text"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+            value={formData.projectCode}
+            onChange={(e) => setFormData({...formData, projectCode: e.target.value})}
+            placeholder="e.g., ABC-001, PROJ-2024-001"
+          />
+        </div>
+
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Billing Rate ($/hour) (Optional)
+          </label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60">$</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              className="w-full pl-8 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+              value={formData.billingRate}
+              onChange={(e) => setFormData({...formData, billingRate: e.target.value})}
+              placeholder="75.00"
+            />
+          </div>
+          <p className="text-white/50 text-xs mt-2">Client billing rate for this project</p>
+        </div>
+
+        <div className="flex space-x-4">
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white py-3 px-6 rounded-xl font-medium hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+          >
+            {loading ? 'Adding...' : 'Add Project'}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="bg-white/10 text-white py-3 px-6 rounded-xl font-medium hover:bg-white/20 transition-all duration-300 flex-1"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function EditClientProjectForm({ project, onSuccess, onCancel }) {
+  const [formData, setFormData] = useState({
+    clientName: project.client_name || '',
+    projectName: project.project_name || '',
+    projectCode: project.project_code || '',
+    billingRate: project.billing_rate ? project.billing_rate.toString() : ''
+  })
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const { error } = await database.updateClientProject(project.id, {
+        client_name: formData.clientName,
+        project_name: formData.projectName,
+        project_code: formData.projectCode,
+        billing_rate: formData.billingRate ? parseFloat(formData.billingRate) : null
+      })
+
+      if (error) throw error
+      
+      alert('Project updated successfully!')
+      onSuccess()
+    } catch (error) {
+      console.error('Error updating project:', error)
+      alert('Error updating project. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
+      <h4 className="text-xl font-bold text-white mb-6">Edit Client Project</h4>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Client Name *
+          </label>
+          <input
+            type="text"
+            required
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-300"
+            value={formData.clientName}
+            onChange={(e) => setFormData({...formData, clientName: e.target.value})}
+            placeholder="e.g., ABC Corporation, XYZ Inc"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Project Name *
+          </label>
+          <input
+            type="text"
+            required
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-300"
+            value={formData.projectName}
+            onChange={(e) => setFormData({...formData, projectName: e.target.value})}
+            placeholder="e.g., Website Redesign, Mobile App"
+          />
+        </div>
+
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Project Code (Optional)
+          </label>
+          <input
+            type="text"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-300"
+            value={formData.projectCode}
+            onChange={(e) => setFormData({...formData, projectCode: e.target.value})}
+            placeholder="e.g., ABC-001, PROJ-2024-001"
+          />
+        </div>
+
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Billing Rate ($/hour) (Optional)
+          </label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60">$</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              className="w-full pl-8 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-300"
+              value={formData.billingRate}
+              onChange={(e) => setFormData({...formData, billingRate: e.target.value})}
+              placeholder="75.00"
+            />
+          </div>
+          <p className="text-white/50 text-xs mt-2">Client billing rate for this project</p>
+        </div>
+
+        <div className="flex space-x-4">
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-gradient-to-r from-yellow-500 to-orange-600 text-white py-3 px-6 rounded-xl font-medium hover:from-yellow-600 hover:to-orange-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+          >
+            {loading ? 'Updating...' : 'Update Project'}
           </button>
           <button
             type="button"
