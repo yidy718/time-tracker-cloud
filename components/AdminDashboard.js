@@ -962,7 +962,8 @@ function EditEmployeeForm({ employee, organizationId, onSuccess, onCancel }) {
     lastName: employee.last_name || '',
     email: employee.email || '',
     role: employee.role || 'employee',
-    isActive: employee.is_active !== false
+    isActive: employee.is_active !== false,
+    hourlyRate: employee.hourly_rate || ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -978,7 +979,8 @@ function EditEmployeeForm({ employee, organizationId, onSuccess, onCancel }) {
         last_name: formData.lastName,
         email: formData.email,
         role: formData.role,
-        is_active: formData.isActive
+        is_active: formData.isActive,
+        hourly_rate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null
       })
 
       if (updateError) throw updateError
@@ -1070,6 +1072,25 @@ function EditEmployeeForm({ employee, organizationId, onSuccess, onCancel }) {
             />
             <span className="text-white/80 font-medium">Active Employee</span>
           </label>
+        </div>
+
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Hourly Rate (Optional)
+          </label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60">$</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              className="w-full pl-8 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-300"
+              value={formData.hourlyRate}
+              onChange={(e) => setFormData({...formData, hourlyRate: e.target.value})}
+              placeholder="25.00"
+            />
+          </div>
+          <p className="text-white/50 text-xs mt-2">Enter the employee&apos;s hourly wage for payroll calculations</p>
         </div>
 
         <div className="flex space-x-4">
