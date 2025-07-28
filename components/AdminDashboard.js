@@ -375,64 +375,82 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
         </button>
       </div>
 
-      <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
+      <div className="space-y-4">
         {employees.length > 0 ? (
-          <div className="space-y-4">
-            {employees.map((emp) => (
-              <div key={emp.id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
-                <div className="flex-1">
-                  <p className="font-medium text-white">{emp.first_name} {emp.last_name}</p>
-                  <p className="text-sm text-white/70">{emp.email}</p>
-                  {emp.username && (
-                    <p className="text-xs text-white/50">Username: {emp.username}</p>
-                  )}
+          employees.map((emp, index) => (
+            <div 
+              key={emp.id} 
+              className="group bg-white/10 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-[1.02]"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+                <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-lg flex-shrink-0">
+                    {emp.first_name[0]}{emp.last_name[0]}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-lg sm:text-xl text-white truncate">{emp.first_name} {emp.last_name}</p>
+                    <p className="text-white/70 text-sm truncate">{emp.email}</p>
+                    {emp.username && (
+                      <p className="text-white/50 text-xs">Username: {emp.username}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    emp.role === 'admin' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                  }`}>
-                    {emp.role}
-                  </span>
-                  <div className="flex space-x-1">
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+                  <div className="text-left sm:text-right">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      emp.role === 'admin' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                    }`}>
+                      {emp.role}
+                    </span>
+                    <p className="text-white/60 text-xs mt-1">
+                      {emp.is_active ? 'Active' : 'Inactive'}
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     {emp.username && (
                       <>
                         <button
                           onClick={() => showCredentials(emp)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
                           title="Show Login Credentials"
                         >
-                          👁️
+                          👁️ Credentials
                         </button>
                         <button
                           onClick={() => resetPassword(emp)}
-                          className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
+                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
                           title="Reset Password"
                         >
-                          🔄
+                          🔄 Reset
                         </button>
                       </>
                     )}
                     <button
                       onClick={() => editEmployee(emp)}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
                       title="Edit Employee"
                     >
-                      ✏️
+                      ✏️ Edit
                     </button>
                     <button
                       onClick={() => deleteEmployee(emp.id, `${emp.first_name} ${emp.last_name}`)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
                       title="Delete Employee"
                     >
-                      🗑️
+                      🗑️ Delete
                     </button>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))
         ) : (
-          <p className="text-white/60 text-center py-8">No employees added yet</p>
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20 text-center">
+            <div className="text-6xl mb-4">👥</div>
+            <p className="text-white/60 text-lg">No employees added yet</p>
+            <p className="text-white/40 text-sm mt-2">Click &quot;Add Employee&quot; to get started</p>
+          </div>
         )}
       </div>
 

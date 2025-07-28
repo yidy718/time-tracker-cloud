@@ -253,8 +253,8 @@ export default function SuperAdminDashboard({ session, employee }) {
                         </button>
                         <button
                           onClick={() => {
-                            setSelectedCompany(company)
-                            setShowEditCompany(true)
+                            // For now, just show company details - we can add edit functionality later
+                            viewCompanyDetails(company)
                           }}
                           className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                           title="Edit Company"
