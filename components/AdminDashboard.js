@@ -59,12 +59,16 @@ export default function AdminDashboard({ session, employee }) {
           <div className="flex justify-between items-start">
             <div className="flex-1 min-w-0 pr-4">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <span className="text-xl sm:text-2xl">⚙️</span>
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg p-1 sm:p-2">
+                  <img 
+                    src="/vas-logo.jpg" 
+                    alt="V.A.S Tri State" 
+                    className="w-full h-full object-contain rounded-xl"
+                  />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-2xl sm:text-4xl font-bold text-white mb-1 truncate">Admin Dashboard</h1>
-                  <p className="text-white/80 text-base sm:text-lg truncate">{employee.organization?.name}</p>
+                  <h1 className="text-2xl sm:text-4xl font-bold text-white mb-1 truncate">{employee.organization?.name}</h1>
+                  <p className="text-white/80 text-base sm:text-lg truncate">Admin Dashboard</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
