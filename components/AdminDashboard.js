@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { database, auth } from '../lib/supabase'
 import ReportsTab from './ReportsTab'
 
@@ -11,11 +11,7 @@ export default function AdminDashboard({ session, employee }) {
   const [showPasswordChange, setShowPasswordChange] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [employeesData, locationsData, activeSessionsData] = await Promise.all([
         database.getEmployees(employee.organization_id),
@@ -30,7 +26,11 @@ export default function AdminDashboard({ session, employee }) {
       console.error('Error loading admin data:', error)
     }
     setLoading(false)
-  }
+  }, [employee.organization_id])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   if (loading) {
     return (
@@ -296,6 +296,30 @@ function DashboardTab({ activeSessions, employees, locations }) {
 
 function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showEditForm, setShowEditForm] = useState(false)
+  const [selectedEmployee, setSelectedEmployee] = useState(null)
+
+  const editEmployee = (employee) => {
+    setSelectedEmployee(employee)
+    setShowEditForm(true)
+  }
+
+  const deleteEmployee = async (employeeId, employeeName) => {
+    if (!confirm(`Are you sure you want to delete "${employeeName}"? This will remove all their time records and cannot be undone!`)) {
+      return
+    }
+
+    try {
+      const { error } = await database.deleteEmployee(employeeId)
+      if (error) throw error
+
+      alert(`Employee "${employeeName}" has been deleted successfully.`)
+      onEmployeesChange() // Refresh the employee list
+    } catch (error) {
+      console.error('Error deleting employee:', error)
+      alert(`Error deleting employee: ${error.message}`)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -314,15 +338,36 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
           <div className="space-y-4">
             {employees.map((emp) => (
               <div key={emp.id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
-                <div>
+                <div className="flex-1">
                   <p className="font-medium text-white">{emp.first_name} {emp.last_name}</p>
                   <p className="text-sm text-white/70">{emp.email}</p>
+                  {emp.username && (
+                    <p className="text-xs text-white/50">Username: {emp.username}</p>
+                  )}
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  emp.role === 'admin' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                }`}>
-                  {emp.role}
-                </span>
+                <div className="flex items-center space-x-3">
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    emp.role === 'admin' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                  }`}>
+                    {emp.role}
+                  </span>
+                  <div className="flex space-x-1">
+                    <button
+                      onClick={() => editEmployee(emp)}
+                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
+                      title="Edit Employee"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => deleteEmployee(emp.id, `${emp.first_name} ${emp.last_name}`)}
+                      className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
+                      title="Delete Employee"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -339,6 +384,22 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
             onEmployeesChange()
           }}
           onCancel={() => setShowAddForm(false)}
+        />
+      )}
+
+      {showEditForm && selectedEmployee && (
+        <EditEmployeeForm
+          employee={selectedEmployee}
+          organizationId={organizationId}
+          onSuccess={() => {
+            setShowEditForm(false)
+            setSelectedEmployee(null)
+            onEmployeesChange()
+          }}
+          onCancel={() => {
+            setShowEditForm(false)
+            setSelectedEmployee(null)
+          }}
         />
       )}
     </div>
@@ -489,8 +550,8 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
       const defaultPassword = 'emp123' // Simple default password
       
       // Create employee record directly (no Supabase Auth needed)
+      // Let Supabase generate the UUID automatically
       const { error: empError } = await database.createEmployee({
-        id: crypto.randomUUID(), // Generate a UUID for the employee
         organization_id: organizationId,
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -505,7 +566,6 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
         if (empError.message.includes('duplicate key value violates unique constraint')) {
           const uniqueUsername = `${username}${Math.floor(Math.random() * 1000)}`
           const { error: retryError } = await database.createEmployee({
-            id: crypto.randomUUID(),
             organization_id: organizationId,
             first_name: formData.firstName,
             last_name: formData.lastName,
@@ -619,9 +679,146 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
       </form>
 
       <div className="mt-6 p-4 bg-blue-500/20 border border-blue-500/30 rounded-xl text-blue-300 text-sm">
-        💡 Employee will be created with temporary password: <strong>TempPass123!</strong><br/>
+        💡 Employee will be created with temporary password: <strong>emp123</strong><br/>
         Make sure to tell them to change it after first login.
       </div>
+    </div>
+  )
+}
+
+function EditEmployeeForm({ employee, organizationId, onSuccess, onCancel }) {
+  const [formData, setFormData] = useState({
+    firstName: employee.first_name || '',
+    lastName: employee.last_name || '',
+    email: employee.email || '',
+    role: employee.role || 'employee',
+    isActive: employee.is_active !== false
+  })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    try {
+      const { error: updateError } = await database.updateEmployee(employee.id, {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        role: formData.role,
+        is_active: formData.isActive
+      })
+
+      if (updateError) throw updateError
+
+      alert('Employee updated successfully!')
+      onSuccess()
+    } catch (error) {
+      console.error('Error updating employee:', error)
+      setError(error.message || 'Error updating employee')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
+      <h4 className="text-xl font-bold text-white mb-6">Edit Employee</h4>
+      
+      {error && (
+        <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-300 text-sm">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            First Name *
+          </label>
+          <input
+            type="text"
+            required
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-300"
+            value={formData.firstName}
+            onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+            placeholder="John"
+          />
+        </div>
+
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Last Name *
+          </label>
+          <input
+            type="text"
+            required
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-300"
+            value={formData.lastName}
+            onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+            placeholder="Doe"
+          />
+        </div>
+
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Email *
+          </label>
+          <input
+            type="email"
+            required
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-300"
+            value={formData.email}
+            onChange={(e) => setFormData({...formData, email: e.target.value})}
+            placeholder="john@company.com"
+          />
+        </div>
+
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Role
+          </label>
+          <select
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-300"
+            value={formData.role}
+            onChange={(e) => setFormData({...formData, role: e.target.value})}
+          >
+            <option value="employee">Employee</option>
+            <option value="manager">Manager</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={formData.isActive}
+              onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+              className="w-5 h-5 text-yellow-500 bg-white/10 border-white/20 rounded focus:ring-yellow-500 focus:ring-2"
+            />
+            <span className="text-white/80 font-medium">Active Employee</span>
+          </label>
+        </div>
+
+        <div className="flex space-x-4">
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-gradient-to-r from-yellow-500 to-orange-600 text-white py-3 px-6 rounded-xl font-medium hover:from-yellow-600 hover:to-orange-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+          >
+            {loading ? 'Updating Employee...' : 'Update Employee'}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="bg-white/10 text-white py-3 px-6 rounded-xl font-medium hover:bg-white/20 transition-all duration-300 flex-1"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
     </div>
   )
 }

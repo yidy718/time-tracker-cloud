@@ -276,7 +276,7 @@ export default function SuperAdminDashboard({ session, employee }) {
             <div className="text-center py-16">
               <div className="text-8xl mb-6 animate-pulse">🏢</div>
               <p className="text-white/80 text-xl font-medium mb-2">No companies set up yet</p>
-              <p className="text-white/60">Click "Add New Company" to get started!</p>
+              <p className="text-white/60">Click &quot;Add New Company&quot; to get started!</p>
             </div>
           )}
         </div>

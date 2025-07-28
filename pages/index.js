@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase, auth, database } from '../lib/supabase'
 import Auth from '../components/Auth'
 import TimeTracker from '../components/TimeTracker'
@@ -10,11 +10,7 @@ export default function Home({ session }) {
   const [loading, setLoading] = useState(true)
   const [currentSession, setCurrentSession] = useState(null)
 
-  useEffect(() => {
-    checkSession()
-  }, [session])
-
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     // Check for Supabase Auth session (admins)
     if (session?.user) {
       setCurrentSession(session)
@@ -38,9 +34,13 @@ export default function Home({ session }) {
     }
     
     setLoading(false)
-  }
+  }, [session, fetchEmployee])
 
-  const fetchEmployee = async () => {
+  useEffect(() => {
+    checkSession()
+  }, [checkSession])
+
+  const fetchEmployee = useCallback(async () => {
     try {
       const { data, error } = await database.getCurrentEmployee(session.user.id)
       
@@ -55,7 +55,7 @@ export default function Home({ session }) {
       setEmployee(null)
     }
     setLoading(false)
-  }
+  }, [session])
 
   if (loading) {
     return (

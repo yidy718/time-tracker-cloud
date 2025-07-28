@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { database, auth } from '../lib/supabase'
 
 export default function TimeTracker({ session, employee }) {
@@ -17,19 +17,7 @@ export default function TimeTracker({ session, employee }) {
   const [showWeeklyActivities, setShowWeeklyActivities] = useState(false)
   const [weeklyActivities, setWeeklyActivities] = useState([])
 
-  useEffect(() => {
-    // Update current time every second
-    const timer = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 1000)
-
-    // Load initial data
-    loadData()
-
-    return () => clearInterval(timer)
-  }, [])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       // Load current session
       const { data: sessionData } = await database.getCurrentSession(employee.id)
@@ -44,9 +32,21 @@ export default function TimeTracker({ session, employee }) {
     } catch (error) {
       console.error('Error loading data:', error)
     }
-  }
+  }, [employee.id, employee.organization_id, loadTotalHours])
 
-  const loadTotalHours = async () => {
+  useEffect(() => {
+    // Update current time every second
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+
+    // Load initial data
+    loadData()
+
+    return () => clearInterval(timer)
+  }, [loadData])
+
+  const loadTotalHours = useCallback(async () => {
     try {
       const now = new Date()
       const startOfWeek = new Date(now)
@@ -73,7 +73,7 @@ export default function TimeTracker({ session, employee }) {
     } catch (error) {
       console.error('Error loading total hours:', error)
     }
-  }
+  }, [employee.organization_id, employee.id])
 
   const handleClockIn = async () => {
     if (!selectedLocation) {
