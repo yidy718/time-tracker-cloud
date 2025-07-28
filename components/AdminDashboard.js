@@ -484,10 +484,15 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
     setError('')
 
     try {
-      // Create auth user first
+      // Create auth user first - we'll handle email confirmation through Supabase settings
       const { data: authData, error: authError } = await auth.signUp(
         formData.email, 
-        'TempPass123!' // Temporary password - employee should change
+        'TempPass123!', // Temporary password - employee should change
+        {
+          data: {
+            full_name: `${formData.firstName} ${formData.lastName}`
+          }
+        }
       )
 
       if (authError) throw authError
@@ -504,7 +509,7 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
 
       if (empError) throw empError
 
-      alert(`Employee added! Temporary password: TempPass123!\nTell them to change it after first login.`)
+      alert(`Employee added successfully!\n\nLogin Details:\nEmail: ${formData.email}\nTemporary password: TempPass123!\n\nNote: Employee can log in immediately and should change password on first login.`)
       onSuccess()
     } catch (error) {
       console.error('Error adding employee:', error)
