@@ -15,7 +15,10 @@ export default function ReportsTab({ employees, organizationId }) {
   useEffect(() => {
     const now = new Date()
     const startOfWeek = new Date(now)
-    startOfWeek.setDate(now.getDate() - now.getDay())
+    // Get Monday as start of week (getDay() returns 0=Sunday, 1=Monday, etc.)
+    const dayOfWeek = now.getDay()
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // Sunday becomes 6, others become dayOfWeek-1
+    startOfWeek.setDate(now.getDate() - daysFromMonday)
     startOfWeek.setHours(0, 0, 0, 0)
     
     const endOfWeek = new Date(startOfWeek)
@@ -78,7 +81,7 @@ export default function ReportsTab({ employees, organizationId }) {
   const generateCSV = () => {
     if (!reportData) return ''
 
-    const headers = ['Employee', 'Date', 'Hours Worked', 'Clock In', 'Clock Out', 'Location', 'Duration (Minutes)', 'Hourly Rate', 'Total Pay']
+    const headers = ['Employee', 'Date', 'Hours Worked', 'Clock In', 'Clock Out', 'Location', 'Duration (Minutes)', 'Hourly Rate', 'Total Pay', 'Notes']
     const rows = reportData.map(entry => {
       const durationHours = (entry.duration_minutes || 0) / 60
       const hourlyRate = entry.hourly_rate || 0
@@ -93,7 +96,8 @@ export default function ReportsTab({ employees, organizationId }) {
         entry.location_name || 'N/A',
         entry.duration_minutes || 0,
         hourlyRate ? `$${hourlyRate.toFixed(2)}` : 'N/A',
-        hourlyRate ? `$${totalPay.toFixed(2)}` : 'N/A'
+        hourlyRate ? `$${totalPay.toFixed(2)}` : 'N/A',
+        entry.notes || 'No notes'
       ]
     })
 
@@ -154,7 +158,8 @@ export default function ReportsTab({ employees, organizationId }) {
    Hours: ${formatDuration(entry.duration_minutes || 0)}
    Time: ${new Date(entry.clock_in).toLocaleTimeString()} - ${entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString() : 'Active'}
    Location: ${entry.location_name || 'N/A'}
-   Pay: ${rate ? `$${rate.toFixed(2)}/hr = $${totalPay.toFixed(2)} total` : 'No rate set'}
+   Pay: ${rate ? `$${rate.toFixed(2)}/hr = $${totalPay.toFixed(2)} total` : 'No rate set'}${entry.notes ? `
+   Notes: ${entry.notes}` : ''}
    ────────────────────────────────────────────`
     }).join('\n\n')
 
@@ -264,12 +269,12 @@ VasHours Team`
     // Header text
     pdf.setTextColor(255, 255, 255)
     pdf.text('Employee', 22, yPos)
-    pdf.text('Date', 55, yPos)
-    pdf.text('Hours', 80, yPos)
-    pdf.text('Clock In', 100, yPos)
-    pdf.text('Clock Out', 125, yPos)
-    pdf.text('Location', 150, yPos)
-    pdf.text('Pay', 175, yPos)
+    pdf.text('Date', 48, yPos)
+    pdf.text('Hours', 68, yPos)
+    pdf.text('In/Out', 88, yPos)
+    pdf.text('Location', 118, yPos)
+    pdf.text('Pay', 140, yPos)
+    pdf.text('Notes', 155, yPos)
     
     // Reset text color for data
     pdf.setTextColor(0, 0, 0)
@@ -291,19 +296,20 @@ VasHours Team`
       const totalPay = durationHours * rate
       
       // Row data
-      pdf.text(`${entry.first_name} ${entry.last_name}`.substring(0, 12), 22, yPos)
-      pdf.text(new Date(entry.clock_in).toLocaleDateString().substring(0, 8), 55, yPos)
-      pdf.text(formatDuration(entry.duration_minutes || 0), 80, yPos)
-      pdf.text(new Date(entry.clock_in).toLocaleTimeString('en-US', { 
+      pdf.text(`${entry.first_name} ${entry.last_name}`.substring(0, 10), 22, yPos)
+      pdf.text(new Date(entry.clock_in).toLocaleDateString().substring(0, 6), 48, yPos)
+      pdf.text(formatDuration(entry.duration_minutes || 0), 68, yPos)
+      const timeRange = `${new Date(entry.clock_in).toLocaleTimeString('en-US', { 
         hour: '2-digit', 
         minute: '2-digit' 
-      }), 100, yPos)
-      pdf.text(entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString('en-US', { 
+      })}-${entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString('en-US', { 
         hour: '2-digit', 
         minute: '2-digit' 
-      }) : 'Active', 125, yPos)
-      pdf.text((entry.location_name || 'N/A').substring(0, 10), 150, yPos)
-      pdf.text(rate ? `$${totalPay.toFixed(2)}` : 'N/A', 175, yPos)
+      }) : 'Active'}`
+      pdf.text(timeRange.substring(0, 11), 88, yPos)
+      pdf.text((entry.location_name || 'N/A').substring(0, 8), 118, yPos)
+      pdf.text(rate ? `$${totalPay.toFixed(0)}` : 'N/A', 140, yPos)
+      pdf.text((entry.notes || '').substring(0, 15), 155, yPos)
       
       yPos += 7
       
@@ -482,6 +488,11 @@ VasHours Team`
                     {entry.hourly_rate && (
                       <p className="text-yellow-400 text-sm font-mono mt-1">
                         ${entry.hourly_rate}/hr • ${((entry.duration_minutes || 0) / 60 * entry.hourly_rate).toFixed(2)} total
+                      </p>
+                    )}
+                    {entry.notes && (
+                      <p className="text-blue-300 text-xs mt-2 bg-white/5 rounded-lg p-2 border border-white/10">
+                        📝 {entry.notes}
                       </p>
                     )}
                   </div>

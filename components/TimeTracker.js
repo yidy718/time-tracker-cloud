@@ -16,12 +16,17 @@ export default function TimeTracker({ session, employee }) {
   const [totalHours, setTotalHours] = useState(0)
   const [showWeeklyActivities, setShowWeeklyActivities] = useState(false)
   const [weeklyActivities, setWeeklyActivities] = useState([])
+  const [showClockOutModal, setShowClockOutModal] = useState(false)
+  const [clockOutMemo, setClockOutMemo] = useState('')
 
   const loadTotalHours = useCallback(async () => {
     try {
       const now = new Date()
       const startOfWeek = new Date(now)
-      startOfWeek.setDate(now.getDate() - now.getDay())
+      // Get Monday as start of week (getDay() returns 0=Sunday, 1=Monday, etc.)
+      const dayOfWeek = now.getDay()
+      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // Sunday becomes 6, others become dayOfWeek-1
+      startOfWeek.setDate(now.getDate() - daysFromMonday)
       startOfWeek.setHours(0, 0, 0, 0)
       
       const endOfWeek = new Date(startOfWeek)
@@ -97,18 +102,26 @@ export default function TimeTracker({ session, employee }) {
     setLoading(false)
   }
 
-  const handleClockOut = async () => {
+  const handleClockOut = () => {
+    if (!currentSession) return
+    setShowClockOutModal(true)
+  }
+
+  const confirmClockOut = async () => {
     if (!currentSession) return
 
     setLoading(true)
     try {
-      const { data, error } = await database.clockOut(currentSession.id)
+      const { data, error } = await database.clockOut(currentSession.id, clockOutMemo.trim() || null)
       if (error) throw error
       
       setCurrentSession(null)
       setIsOnBreak(false)
       setBreakStartTime(null)
+      setShowClockOutModal(false)
+      setClockOutMemo('')
       alert('Clocked out successfully!')
+      await loadTotalHours()
     } catch (error) {
       console.error('Clock out error:', error)
       alert('Error clocking out. Please try again.')
@@ -465,6 +478,20 @@ export default function TimeTracker({ session, employee }) {
           onClose={() => setShowWeeklyActivities(false)}
         />
       )}
+
+      {/* Clock Out Modal */}
+      {showClockOutModal && (
+        <ClockOutModal 
+          memo={clockOutMemo}
+          onMemoChange={setClockOutMemo}
+          onConfirm={confirmClockOut}
+          onCancel={() => {
+            setShowClockOutModal(false)
+            setClockOutMemo('')
+          }}
+          loading={loading}
+        />
+      )}
     </div>
   )
 }
@@ -730,6 +757,72 @@ function WeeklyActivitiesModal({ activities, employee, onClose }) {
           >
             Close
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ClockOutModal({ memo, onMemoChange, onConfirm, onCancel, loading }) {
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+              🚪
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800">Clock Out</h3>
+          </div>
+          <button
+            onClick={onCancel}
+            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          <div>
+            <label className="block text-gray-700 font-medium mb-3">
+              📝 Add a memo about what you accomplished today (optional)
+            </label>
+            <textarea
+              value={memo}
+              onChange={(e) => onMemoChange(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300 resize-none"
+              rows="4"
+              placeholder="What did you work on today? Any notes for your manager..."
+            />
+          </div>
+
+          <div className="text-sm text-gray-500 bg-blue-50 p-3 rounded-lg">
+            💡 <strong>Tip:</strong> Adding work notes helps your manager understand your daily contributions and can be useful for performance reviews.
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={onConfirm}
+              disabled={loading}
+              className="bg-gradient-to-r from-red-500 to-pink-600 text-white py-3 rounded-xl font-medium hover:from-red-600 hover:to-pink-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Clocking Out...</span>
+                </span>
+              ) : (
+                '🚪 Clock Out'
+              )}
+            </button>
+            <button
+              onClick={onCancel}
+              disabled={loading}
+              className="bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200 transition-all duration-300 disabled:opacity-50"
+            >
+              ❌ Cancel
+            </button>
+          </div>
         </div>
       </div>
     </div>
