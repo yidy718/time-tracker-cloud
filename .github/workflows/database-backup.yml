@@ -1,0 +1,75 @@
+# Automated Database Backup to GitHub
+# Runs weekly and stores encrypted backups
+
+name: Database Backup
+
+on:
+  schedule:
+    # Run every Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup PostgreSQL Client
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y postgresql-client
+        
+    - name: Create Database Backup
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: |
+        # Create timestamped backup
+        BACKUP_FILE="backup-$(date +%Y%m%d_%H%M%S).sql"
+        
+        # Create schema and data backup
+        pg_dump "$DATABASE_URL" \
+          --no-owner \
+          --no-privileges \
+          --clean \
+          --if-exists \
+          > "$BACKUP_FILE"
+        
+        # Compress the backup
+        gzip "$BACKUP_FILE"
+        
+        # Store in artifacts (encrypted by GitHub)
+        echo "BACKUP_FILE=${BACKUP_FILE}.gz" >> $GITHUB_ENV
+        
+    - name: Upload Backup Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: database-backup-${{ github.run_number }}
+        path: backup-*.sql.gz
+        retention-days: 30 # Keep backups for 30 days
+
+    - name: Cleanup Old Backups
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Keep only the last 4 backup artifacts (1 month of weekly backups)
+          const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.runId,
+          });
+          
+          const backupArtifacts = artifacts.data.artifacts
+            .filter(artifact => artifact.name.startsWith('database-backup-'))
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          
+          // Delete old backups (keep newest 4)
+          for (let i = 4; i < backupArtifacts.length; i++) {
+            await github.rest.actions.deleteArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: backupArtifacts[i].id,
+            });
+          }
