@@ -2,9 +2,13 @@
 # Dependencies
 node_modules/
 
-# Environment variables
+# Environment variables (sensitive data)
+.env
 .env.local
-.env*.local
+.env.production
+.env.staging
+.env.vercel
+.env*
 
 # Next.js
 .next/
@@ -24,3 +28,21 @@ dist/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+.temp/
+
+# Debug and backup files
+debug*.sql
+temp*.sql
+*.bak
+*.backup
+
+# Mobile app node_modules
+mobile-app/node_modules/
+
+# Supabase local
+.supabase/

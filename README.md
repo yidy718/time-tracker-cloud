@@ -129,7 +129,7 @@ npm run dev
 ## 🚀 Deployment (Making It Live)
 
 ### 🌐 **Live on Vercel** (Because It Just Works)
-**Production URL**: [https://vashours.vercel.app](https://vashours.vercel.app)
+**Production URL**: Coming soon! (Building an awesome landing page first)
 
 ### 🔄 **Continuous Deployment** (Set It and Forget It)
 - Push to `main` branch → Automatic deployment
@@ -194,6 +194,10 @@ npm run dev
 6. Push and create a Pull Request
 7. Wait for review (be patient, we're only human)
 
+## 🙏 **Special Thanks** (The Heroes Behind the Scenes)
+
+- **KIKI** 🦸‍♀️ - Our amazing red-headed testing superhero who broke things so we could fix them (and made everything better in the process!)
+
 ## 📝 **License** (The Legal Stuff)
 
 This project is proprietary software built with love and caffeine. All rights reserved to yidy and the coffee that made this possible.
@@ -220,7 +224,7 @@ Special thanks to:
 
 *"Time tracking software that doesn't make you want to throw your computer out the window"* - Probably someone, somewhere
 
-**Live Demo**: [https://vashours.vercel.app](https://vashours.vercel.app)
+**Live Demo**: Contact us for a private demo!
 **GitHub**: Making code social since... well, since GitHub existed
 
 ---

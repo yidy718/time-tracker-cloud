@@ -27,14 +27,14 @@ export default function Document() {
         <meta property="og:title" content="VasHours - Time Tracking" />
         <meta property="og:description" content="Professional employee time tracking and management system" />
         <meta property="og:site_name" content="VasHours" />
-        <meta property="og:url" content="https://vashours.vercel.app" />
-        <meta property="og:image" content="https://vashours.vercel.app/icon-512.png" />
+        <meta property="og:url" content="/" />
+        <meta property="og:image" content="/icon-512.png" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="VasHours - Time Tracking" />
         <meta name="twitter:description" content="Professional employee time tracking and management system" />
-        <meta name="twitter:image" content="https://vashours.vercel.app/icon-512.png" />
+        <meta name="twitter:image" content="/icon-512.png" />
 
         {/* Viewport and Performance */}
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
