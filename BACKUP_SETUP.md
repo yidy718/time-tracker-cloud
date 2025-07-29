@@ -30,9 +30,9 @@
 
 ---
 
-## **Alternative: Free GitHub Backup**
+## **Secondary: Monthly GitHub Backup**
 
-If you prefer free backups, you can use the GitHub Action I created:
+Perfect complement to PITR! This provides monthly external backups:
 
 ### **Setup Steps:**
 
@@ -44,8 +44,8 @@ If you prefer free backups, you can use the GitHub Action I created:
      - Value: Your Supabase connection string
 
 2. 📅 **Backup Schedule**
-   - Runs automatically every Sunday at 2 AM UTC
-   - Keeps 4 weeks of backups
+   - Runs automatically 1st of every month at 2 AM UTC
+   - Keeps 6 months of backups (90 days each)
    - Can trigger manually anytime
 
 3. 📥 **Access Backups**
