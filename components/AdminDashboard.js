@@ -59,12 +59,20 @@ export default function AdminDashboard({ session, employee }) {
           <div className="flex justify-between items-start">
             <div className="flex-1 min-w-0 pr-4">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg p-1 sm:p-2">
-                  <img 
-                    src="/vas-logo.jpg" 
-                    alt="V.A.S Tri State" 
-                    className="w-full h-full object-contain rounded-xl"
-                  />
+                <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center shadow-lg">
+                  {employee.organization?.name?.toLowerCase().includes('v.a.s') || employee.organization?.name?.toLowerCase().includes('vas') ? (
+                    <img 
+                      src="/vas-logo.jpg" 
+                      alt="V.A.S Tri State" 
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <img 
+                      src="/logo.jpg" 
+                      alt="VasHours" 
+                      className="w-full h-full object-contain rounded-xl"
+                    />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <h1 className="text-2xl sm:text-4xl font-bold text-white mb-1 truncate">{employee.organization?.name}</h1>
@@ -163,6 +171,7 @@ export default function AdminDashboard({ session, employee }) {
           <ReportsTab 
             employees={employees}
             organizationId={employee.organization_id}
+            organization={employee.organization}
           />
         )}
 
