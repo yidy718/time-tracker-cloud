@@ -457,7 +457,7 @@ ${companyTeam}`
               <option value="all" className="text-gray-800 bg-white">🔸 All Projects</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id} className="text-gray-800 bg-white">
-                  🎯 {project.name}
+                  🎯 {project.project_name || project.name}
                 </option>
               ))}
             </select>
