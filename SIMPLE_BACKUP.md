@@ -10,7 +10,7 @@
 ### **Step 1: Get the Backup Script**
 ```bash
 cd /home/yidy/Desktop/time-tracker-cloud
-cat database/backup-script.sql
+cat MONTHLY_BACKUP_SCRIPT.sql
 ```
 **Copy** all the SQL that appears.
 
