@@ -68,8 +68,18 @@ export default function TimeTracker({ session, employee }) {
       
       console.log('Locations result:', locationsResult)
       console.log('Projects result:', projectsResult)
+      console.log('Projects data:', projectsResult.data)
+      console.log('Projects length:', projectsResult.data?.length || 0)
       setLocations(locationsResult.data || [])
       setProjects(projectsResult.data || [])
+      
+      // Additional debugging
+      if (projectsResult.error) {
+        console.error('Error loading projects:', projectsResult.error)
+      }
+      if (!projectsResult.data || projectsResult.data.length === 0) {
+        console.warn('No projects found for organization:', employee.organization_id)
+      }
 
       // Load total hours for current week
       await loadTotalHours()
