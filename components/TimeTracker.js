@@ -264,7 +264,11 @@ export default function TimeTracker({ session, employee }) {
                         <span className="font-medium text-gray-700">Change Password</span>
                       </button>
                       <button
-                        onClick={() => auth.signOut()}
+                        onClick={async () => {
+                          if (confirm('Are you sure you want to sign out?')) {
+                            await auth.signOut()
+                          }
+                        }}
                         className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-50 transition-colors text-left mt-2"
                       >
                         <span className="text-lg">🚪</span>
