@@ -1208,6 +1208,9 @@ function ClientProjectsTab({ clientProjects, onClientProjectsChange, organizatio
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-lg sm:text-xl text-white truncate">{project.project_name}</p>
                     <p className="text-white/70 text-sm truncate">{project.client_name}</p>
+                    {project.location && (
+                      <p className="text-white/60 text-sm truncate">📍 {project.location.name}</p>
+                    )}
                     <div className="flex items-center space-x-3 mt-1">
                       {project.project_code && (
                         <span className="px-2 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium">
@@ -1284,9 +1287,25 @@ function AddClientProjectForm({ organizationId, onSuccess, onCancel }) {
     clientName: '',
     projectName: '',
     projectCode: '',
-    billingRate: ''
+    billingRate: '',
+    locationId: ''
   })
   const [loading, setLoading] = useState(false)
+  const [locations, setLocations] = useState([])
+
+  // Load locations when component mounts
+  useEffect(() => {
+    const loadLocations = async () => {
+      try {
+        const { data, error } = await database.getLocations(organizationId)
+        if (error) throw error
+        setLocations(data || [])
+      } catch (error) {
+        console.error('Error loading locations:', error)
+      }
+    }
+    loadLocations()
+  }, [organizationId])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -1298,7 +1317,8 @@ function AddClientProjectForm({ organizationId, onSuccess, onCancel }) {
         client_name: formData.clientName,
         project_name: formData.projectName,
         project_code: formData.projectCode,
-        billing_rate: formData.billingRate ? parseFloat(formData.billingRate) : null
+        billing_rate: formData.billingRate ? parseFloat(formData.billingRate) : null,
+        location_id: formData.locationId || null
       })
 
       if (error) throw error
@@ -1312,7 +1332,7 @@ function AddClientProjectForm({ organizationId, onSuccess, onCancel }) {
 
   return (
     <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
-      <h4 className="text-xl font-bold text-white mb-6">Add New Client Project</h4>
+      <h4 className="text-xl font-bold text-white mb-6">Add New Project</h4>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label className="block text-white/80 font-medium mb-3">
@@ -1372,6 +1392,25 @@ function AddClientProjectForm({ organizationId, onSuccess, onCancel }) {
             />
           </div>
           <p className="text-white/50 text-xs mt-2">Client billing rate for this project</p>
+        </div>
+
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            📍 Project Location (Optional)
+          </label>
+          <select
+            value={formData.locationId}
+            onChange={(e) => setFormData({...formData, locationId: e.target.value})}
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+          >
+            <option value="" className="text-gray-800 bg-white">No specific location</option>
+            {locations.map((location) => (
+              <option key={location.id} value={location.id} className="text-gray-800 bg-white">
+                📍 {location.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-white/50 text-xs mt-2">Where this project work will be performed</p>
         </div>
 
         <div className="flex space-x-4">
