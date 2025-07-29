@@ -1,4 +1,4 @@
-# ⏰ VasHours - The Time Tracker That Actually Works 🎯
+# VasHours - The Time Tracker That Actually Works
 
 *Because keeping track of when your employees are "totally working from home" shouldn't be rocket science*
 
