@@ -49,9 +49,12 @@ export default function CompanySetupWizard({ onComplete }) {
       if (orgError) throw orgError
 
       // 2. Create manager account
+      // Generate secure random password for manager
+      const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12).toUpperCase() + '!@#'
+      
       const { data: authData, error: authError } = await auth.signUp(
         companyData.managerEmail,
-        'TempManager123!' // Temporary password
+        tempPassword
       )
       if (authError) throw authError
 
@@ -91,7 +94,7 @@ export default function CompanySetupWizard({ onComplete }) {
         }
       }
 
-      alert(`✅ ${companyData.companyName} setup complete!\n\nManager Login:\nEmail: ${companyData.managerEmail}\nPassword: TempManager123!\n\nTell them to change the password after first login.`)
+      alert(`✅ ${companyData.companyName} setup complete!\n\nManager Login:\nEmail: ${companyData.managerEmail}\nPassword: ${tempPassword}\n\nIMPORTANT: Save this password! Tell them to change it after first login.`)
       onComplete()
 
     } catch (error) {

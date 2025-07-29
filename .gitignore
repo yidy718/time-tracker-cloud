@@ -40,6 +40,16 @@ debug*.sql
 temp*.sql
 *.bak
 *.backup
+*.dump
+*.dmp
+
+# Security sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
+secrets.json
+credentials.json
 
 # Mobile app node_modules
 mobile-app/node_modules/
