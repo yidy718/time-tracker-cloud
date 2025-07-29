@@ -454,10 +454,10 @@ ${companyTeam}`
               onChange={(e) => setSelectedProject(e.target.value)}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
             >
-              <option value="all" className="text-gray-800 bg-white">All Projects</option>
+              <option value="all" className="text-gray-800 bg-white">🔸 All Projects</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id} className="text-gray-800 bg-white">
-                  {project.name}
+                  🎯 {project.name}
                 </option>
               ))}
             </select>

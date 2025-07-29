@@ -1833,8 +1833,12 @@ function TimeManagementTab({ employees, locations, organizationId, onDataChange 
                       <p className="font-bold text-xl text-white">{session.first_name} {session.last_name}</p>
                       <p className="text-white/70 text-sm">
                         {new Date(session.clock_in).toLocaleDateString()} • {session.location_name}
-                        {session.project_name && ` • ${session.project_name}`}
                       </p>
+                      {session.project_name && session.project_name !== 'No Project' && (
+                        <p className="text-green-300 text-xs font-medium">
+                          🎯 Project: {session.project_name}
+                        </p>
+                      )}
                       <p className="text-white/60 text-xs">
                         {new Date(session.clock_in).toLocaleTimeString()} - {session.clock_out ? new Date(session.clock_out).toLocaleTimeString() : 'In Progress'}
                       </p>
@@ -2008,6 +2012,7 @@ function EditTimeModal({ session, employees, locations, projects, onSave, onCanc
       notes: formData.notes || null
     }
 
+    console.log('EditTimeModal - Saving session with data:', updatedSession)
     await onSave(updatedSession)
     setLoading(false)
   }
@@ -2067,25 +2072,28 @@ function EditTimeModal({ session, employees, locations, projects, onSave, onCanc
             </select>
           </div>
 
-          {projects.length > 0 && (
-            <div>
-              <label className="block text-gray-700 font-medium mb-3">
-                🎯 Project (Optional)
-              </label>
-              <select
-                value={formData.project_id}
-                onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-              >
-                <option value="">No project</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div>
+            <label className="block text-gray-700 font-medium mb-3">
+              🎯 Project (Optional)
+            </label>
+            <select
+              value={formData.project_id}
+              onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+            >
+              <option value="">🔹 No project assigned</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  🎯 {project.name}
+                </option>
+              ))}
+            </select>
+            {projects.length === 0 && (
+              <p className="text-gray-500 text-sm mt-2">
+                💡 No projects available. Create projects in the Client Projects tab.
+              </p>
+            )}
+          </div>
 
           <div>
             <label className="block text-gray-700 font-medium mb-3">
@@ -2179,6 +2187,7 @@ function AddTimeModal({ employees, locations, projects, onSave, onCancel }) {
       notes: formData.notes || null
     }
 
+    console.log('AddTimeModal - Creating session with data:', newSession)
     await onSave(newSession)
     setLoading(false)
   }
@@ -2239,25 +2248,28 @@ function AddTimeModal({ employees, locations, projects, onSave, onCancel }) {
             </select>
           </div>
 
-          {projects.length > 0 && (
-            <div>
-              <label className="block text-gray-700 font-medium mb-3">
-                🎯 Project (Optional)
-              </label>
-              <select
-                value={formData.project_id}
-                onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
-              >
-                <option value="">No project</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div>
+            <label className="block text-gray-700 font-medium mb-3">
+              🎯 Project (Optional)
+            </label>
+            <select
+              value={formData.project_id}
+              onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
+            >
+              <option value="">🔹 No project assigned</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  🎯 {project.name}
+                </option>
+              ))}
+            </select>
+            {projects.length === 0 && (
+              <p className="text-gray-500 text-sm mt-2">
+                💡 No projects available. Create projects in the Client Projects tab.
+              </p>
+            )}
+          </div>
 
           <div>
             <label className="block text-gray-700 font-medium mb-3">

@@ -365,25 +365,28 @@ export default function TimeTracker({ session, employee }) {
                   </select>
                 </div>
                 
-                {projects.length > 0 && (
-                  <div>
-                    <label className="block text-white/80 font-medium mb-3">
-                      Select Project (Optional)
-                    </label>
-                    <select
-                      value={selectedProject}
-                      onChange={(e) => setSelectedProject(e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
-                    >
-                      <option value="" className="text-gray-800 bg-white">No project selected</option>
-                      {projects.map((project) => (
-                        <option key={project.id} value={project.id} className="text-gray-800 bg-white">
-                          {project.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-white/80 font-medium mb-3">
+                    🎯 Select Project (Optional)
+                  </label>
+                  <select
+                    value={selectedProject}
+                    onChange={(e) => setSelectedProject(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
+                  >
+                    <option value="" className="text-gray-800 bg-white">🔹 No project selected</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id} className="text-gray-800 bg-white">
+                        🎯 {project.name}
+                      </option>
+                    ))}
+                  </select>
+                  {projects.length === 0 && (
+                    <p className="text-white/60 text-sm mt-2">
+                      💡 No projects available. Contact your admin to create projects.
+                    </p>
+                  )}
+                </div>
                 <button
                   onClick={handleClockIn}
                   disabled={loading || !selectedLocation}
