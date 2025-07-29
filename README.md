@@ -196,7 +196,7 @@ npm run dev
 
 ## 🙏 **Special Thanks** (The Heroes Behind the Scenes)
 
-- **KIKI** 🦸‍♀️ - Our amazing red-headed testing superhero who broke things so we could fix them (and made everything better in the process!)
+- **KIKI** 🦸‍♀️ - Our amazing red-head testing superhero who broke things so we could fix them (and made everything better in the process!)
 
 ## 📝 **License** (The Legal Stuff)
 
