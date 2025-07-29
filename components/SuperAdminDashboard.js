@@ -460,6 +460,7 @@ function EditCompanyModal({ company, onClose, onComplete }) {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('general')
   const [companyName, setCompanyName] = useState(company.name)
+  const [showAddManager, setShowAddManager] = useState(false)
   
   // Find the manager (admin or manager role in this company)
   const manager = company.employees?.find(emp => emp.role === 'admin' || emp.role === 'manager')
@@ -672,13 +673,22 @@ function EditCompanyModal({ company, onClose, onComplete }) {
                     </div>
                     
                     <div className="pt-4 border-t border-green-200">
-                      <button
-                        onClick={resetManagerPassword}
-                        disabled={loading}
-                        className="bg-gradient-to-r from-orange-500 to-red-600 text-white px-6 py-3 rounded-xl font-medium hover:from-orange-600 hover:to-red-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {loading ? 'Sending Email...' : '📧 Send Password Reset'}
-                      </button>
+                      <div className="flex space-x-4">
+                        <button
+                          onClick={resetManagerPassword}
+                          disabled={loading}
+                          className="bg-gradient-to-r from-orange-500 to-red-600 text-white px-6 py-3 rounded-xl font-medium hover:from-orange-600 hover:to-red-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {loading ? 'Sending Email...' : '📧 Send Password Reset'}
+                        </button>
+                        <button
+                          onClick={() => setShowAddManager(true)}
+                          disabled={loading}
+                          className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          👥 Add Manager
+                        </button>
+                      </div>
                       <p className="text-green-600 text-sm mt-2">
                         This will send a password reset email to the manager
                       </p>
@@ -750,6 +760,148 @@ function EditCompanyModal({ company, onClose, onComplete }) {
             Close
           </button>
         </div>
+      </div>
+
+      {/* Add Manager Modal */}
+      {showAddManager && (
+        <AddManagerModal 
+          companyId={company.id}
+          companyName={company.name}
+          onClose={() => setShowAddManager(false)}
+          onComplete={() => {
+            setShowAddManager(false)
+            onComplete()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// Add Manager Modal Component  
+function AddManagerModal({ companyId, companyName, onClose, onComplete }) {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: ''
+  })
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!formData.firstName || !formData.lastName || !formData.email) {
+      alert('Please fill in all fields')
+      return
+    }
+
+    setLoading(true)
+    try {
+      // Generate secure random password for new manager
+      const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12).toUpperCase() + '!@#'
+      
+      // Create Supabase auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: tempPassword
+      })
+
+      if (authError) throw authError
+
+      // Create employee record as manager
+      const { error: employeeError } = await supabase
+        .from('employees')
+        .insert({
+          id: authData.user.id,
+          organization_id: companyId,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          email: formData.email,
+          role: 'manager',
+          is_active: true
+        })
+
+      if (employeeError) throw employeeError
+
+      alert(`✅ Manager added successfully!\n\nManager Login:\nEmail: ${formData.email}\nPassword: ${tempPassword}\n\nIMPORTANT: Save this password! Tell them to change it after first login.`)
+      onComplete()
+    } catch (error) {
+      console.error('Error adding manager:', error)
+      alert(`Error adding manager: ${error.message}`)
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-bold text-gray-800">Add Manager</h3>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mb-6">
+          <p className="text-gray-600">Adding manager to: <strong>{companyName}</strong></p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-gray-700 font-medium mb-2">First Name *</label>
+            <input
+              type="text"
+              required
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={formData.firstName}
+              onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+              placeholder="John"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-2">Last Name *</label>
+            <input
+              type="text"
+              required
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={formData.lastName}
+              onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+              placeholder="Smith"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-2">Email *</label>
+            <input
+              type="email"
+              required
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              placeholder="john@company.com"
+            />
+          </div>
+
+          <div className="flex space-x-4 pt-4">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-gradient-to-r from-green-500 to-blue-600 text-white py-3 px-6 rounded-xl font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Adding Manager...' : '👥 Add Manager'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
