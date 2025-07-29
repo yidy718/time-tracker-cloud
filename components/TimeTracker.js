@@ -76,9 +76,42 @@ export default function TimeTracker({ session, employee }) {
       // Additional debugging
       if (projectsResult.error) {
         console.error('Error loading projects:', projectsResult.error)
+        console.error('Employee data:', employee)
+        console.error('Session data:', session)
       }
       if (!projectsResult.data || projectsResult.data.length === 0) {
         console.warn('No projects found for organization:', employee.organization_id)
+        console.warn('Employee role:', employee.role)
+        console.warn('Employee ID:', employee.id)
+        console.warn('Projects query error:', projectsResult.error)
+        
+        // Enhanced debugging for RLS/auth issues
+        console.log('Testing Supabase auth state and RLS policies...')
+        import('../lib/supabase').then(({ supabase }) => {
+          // Check current auth user
+          supabase.auth.getUser().then(({ data: { user }, error }) => {
+            console.log('Current Supabase user:', user)
+            console.log('Auth error:', error)
+            
+            // Test direct query to see exact error
+            supabase
+              .from('client_projects')
+              .select('*')
+              .eq('organization_id', employee.organization_id)
+              .then(({ data, error }) => {
+                console.log('Direct client_projects query result:', { data, error })
+              })
+            
+            // Test with count to see if it's a permissions vs data issue
+            supabase
+              .from('client_projects')
+              .select('*', { count: 'exact', head: true })
+              .eq('organization_id', employee.organization_id)
+              .then(({ count, error }) => {
+                console.log('Projects count test:', { count, error })
+              })
+          })
+        })
       }
 
       // Load total hours for current week
