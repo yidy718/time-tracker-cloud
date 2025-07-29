@@ -387,7 +387,7 @@ export default function TimeTracker({ session, employee }) {
                     <option value="" className="text-gray-800 bg-white">🔹 No project selected</option>
                     {projects.map((project) => (
                       <option key={project.id} value={project.id} className="text-gray-800 bg-white">
-                        🎯 {project.project_name || project.name}
+                        🎯 {project.project_name}
                       </option>
                     ))}
                   </select>

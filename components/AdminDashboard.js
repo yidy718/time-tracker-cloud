@@ -2084,7 +2084,7 @@ function EditTimeModal({ session, employees, locations, projects, onSave, onCanc
               <option value="">No project assigned</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
-                  {project.project_name || project.name}
+                  {project.project_name}
                 </option>
               ))}
             </select>
@@ -2260,7 +2260,7 @@ function AddTimeModal({ employees, locations, projects, onSave, onCancel }) {
               <option value="">No project assigned</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
-                  {project.project_name || project.name}
+                  {project.project_name}
                 </option>
               ))}
             </select>
