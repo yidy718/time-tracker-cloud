@@ -502,7 +502,7 @@ function EditCompanyModal({ company, onClose, onComplete }) {
     try {
       // Use Supabase's password reset email functionality
       const { error } = await supabase.auth.resetPasswordForEmail(manager.email, {
-        redirectTo: `${window.location.origin}/`
+        redirectTo: `${window.location.origin}/reset-password`
       })
 
       if (error) throw error
