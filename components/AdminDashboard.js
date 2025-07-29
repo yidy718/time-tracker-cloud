@@ -2081,10 +2081,10 @@ function EditTimeModal({ session, employees, locations, projects, onSave, onCanc
               onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
             >
-              <option value="">🔹 No project assigned</option>
+              <option value="">No project assigned</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
-                  🎯 {project.name}
+                  {project.name}
                 </option>
               ))}
             </select>
@@ -2257,10 +2257,10 @@ function AddTimeModal({ employees, locations, projects, onSave, onCancel }) {
               onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
             >
-              <option value="">🔹 No project assigned</option>
+              <option value="">No project assigned</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
-                  🎯 {project.name}
+                  {project.name}
                 </option>
               ))}
             </select>
