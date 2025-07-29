@@ -4,7 +4,9 @@ import { database } from '../lib/supabase'
 export default function ReportsTab({ employees, organizationId, organization }) {
   const [selectedEmployee, setSelectedEmployee] = useState('all')
   const [selectedLocation, setSelectedLocation] = useState('all')
+  const [selectedProject, setSelectedProject] = useState('all')
   const [locations, setLocations] = useState([])
+  const [projects, setProjects] = useState([])
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [reportData, setReportData] = useState(null)
@@ -33,8 +35,9 @@ export default function ReportsTab({ employees, organizationId, organization }) 
     setStartDate(startOfWeek.toISOString().split('T')[0])
     setEndDate(endOfWeek.toISOString().split('T')[0])
 
-    // Load locations
+    // Load locations and projects
     loadLocations()
+    loadProjects()
   }, [organizationId])
 
   const loadLocations = async () => {
@@ -47,12 +50,23 @@ export default function ReportsTab({ employees, organizationId, organization }) 
     }
   }
 
+  const loadProjects = async () => {
+    try {
+      const { data, error } = await database.getClientProjects(organizationId)
+      if (error) throw error
+      setProjects(data || [])
+    } catch (error) {
+      console.error('Error loading projects:', error)
+    }
+  }
+
   const generateReport = async () => {
     setLoading(true)
     try {
       const { data, error } = await database.getTimeReport({
         organization_id: organizationId,
         employee_id: selectedEmployee === 'all' ? null : selectedEmployee,
+        project_id: selectedProject === 'all' ? null : selectedProject,
         start_date: startDate,
         end_date: endDate
       })
@@ -86,7 +100,7 @@ export default function ReportsTab({ employees, organizationId, organization }) 
   const generateCSV = () => {
     if (!reportData) return ''
 
-    const headers = ['Employee', 'Date', 'Hours Worked', 'Clock In', 'Clock Out', 'Location', 'Duration (Minutes)', 'Hourly Rate', 'Total Pay', 'Notes']
+    const headers = ['Employee', 'Date', 'Hours Worked', 'Clock In', 'Clock Out', 'Location', 'Project', 'Duration (Minutes)', 'Hourly Rate', 'Total Pay', 'Notes']
     const rows = reportData.map(entry => {
       const durationHours = (entry.duration_minutes || 0) / 60
       const hourlyRate = entry.hourly_rate || 0
@@ -99,6 +113,7 @@ export default function ReportsTab({ employees, organizationId, organization }) 
         new Date(entry.clock_in).toLocaleTimeString(),
         entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString() : 'In Progress',
         entry.location_name || 'N/A',
+        entry.project_name || 'No Project',
         entry.duration_minutes || 0,
         hourlyRate ? `$${hourlyRate.toFixed(2)}` : 'N/A',
         hourlyRate ? `$${totalPay.toFixed(2)}` : 'N/A',
@@ -163,6 +178,7 @@ export default function ReportsTab({ employees, organizationId, organization }) 
    Hours: ${formatDuration(entry.duration_minutes || 0)}
    Time: ${new Date(entry.clock_in).toLocaleTimeString()} - ${entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString() : 'Active'}
    Location: ${entry.location_name || 'N/A'}
+   Project: ${entry.project_name || 'No Project'}
    Pay: ${rate ? `$${rate.toFixed(2)}/hr = $${totalPay.toFixed(2)} total` : 'No rate set'}${entry.notes ? `
    Notes: ${entry.notes}` : ''}
    ────────────────────────────────────────────`
@@ -253,12 +269,16 @@ ${companyTeam}`
     // Filter info
     const selectedEmp = employees.find(emp => emp.id === selectedEmployee)
     const selectedLoc = locations.find(loc => loc.id === selectedLocation)
+    const selectedProj = projects.find(proj => proj.id === selectedProject)
     
     if (selectedEmployee !== 'all') {
       pdf.text(`Employee: ${selectedEmp?.first_name} ${selectedEmp?.last_name}`, 120, 65)
     }
     if (selectedLocation !== 'all') {
       pdf.text(`Location: ${selectedLoc?.name}`, 120, 72)
+    }
+    if (selectedProject !== 'all') {
+      pdf.text(`Project: ${selectedProj?.name}`, 120, 79)
     }
     
     // Detailed Time Entries - Manual Table Creation
@@ -279,11 +299,12 @@ ${companyTeam}`
     pdf.setTextColor(255, 255, 255)
     pdf.text('Employee', 22, yPos)
     pdf.text('Date', 48, yPos)
-    pdf.text('Hours', 68, yPos)
-    pdf.text('In/Out', 88, yPos)
-    pdf.text('Location', 118, yPos)
-    pdf.text('Pay', 140, yPos)
-    pdf.text('Notes', 155, yPos)
+    pdf.text('Hours', 65, yPos)
+    pdf.text('In/Out', 82, yPos)
+    pdf.text('Location', 105, yPos)
+    pdf.text('Project', 125, yPos)
+    pdf.text('Pay', 145, yPos)
+    pdf.text('Notes', 160, yPos)
     
     // Reset text color for data
     pdf.setTextColor(0, 0, 0)
@@ -307,7 +328,7 @@ ${companyTeam}`
       // Row data
       pdf.text(`${entry.first_name} ${entry.last_name}`.substring(0, 10), 22, yPos)
       pdf.text(new Date(entry.clock_in).toLocaleDateString().substring(0, 6), 48, yPos)
-      pdf.text(formatDuration(entry.duration_minutes || 0), 68, yPos)
+      pdf.text(formatDuration(entry.duration_minutes || 0), 65, yPos)
       const timeRange = `${new Date(entry.clock_in).toLocaleTimeString('en-US', { 
         hour: '2-digit', 
         minute: '2-digit' 
@@ -315,10 +336,11 @@ ${companyTeam}`
         hour: '2-digit', 
         minute: '2-digit' 
       }) : 'Active'}`
-      pdf.text(timeRange.substring(0, 11), 88, yPos)
-      pdf.text((entry.location_name || 'N/A').substring(0, 8), 118, yPos)
-      pdf.text(rate ? `$${totalPay.toFixed(0)}` : 'N/A', 140, yPos)
-      pdf.text((entry.notes || '').substring(0, 15), 155, yPos)
+      pdf.text(timeRange.substring(0, 11), 82, yPos)
+      pdf.text((entry.location_name || 'N/A').substring(0, 7), 105, yPos)
+      pdf.text((entry.project_name || 'None').substring(0, 7), 125, yPos)
+      pdf.text(rate ? `$${totalPay.toFixed(0)}` : 'N/A', 145, yPos)
+      pdf.text((entry.notes || '').substring(0, 12), 160, yPos)
       
       yPos += 7
       
@@ -362,7 +384,7 @@ ${companyTeam}`
           <h3 className="text-2xl font-bold text-white">Weekly Hours Report</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           <div>
             <label className="block text-white/80 font-medium mb-3">
               Employee
@@ -421,6 +443,24 @@ ${companyTeam}`
               onChange={(e) => setEndDate(e.target.value)}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
             />
+          </div>
+
+          <div>
+            <label className="block text-white/80 font-medium mb-3">
+              Project
+            </label>
+            <select
+              value={selectedProject}
+              onChange={(e) => setSelectedProject(e.target.value)}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+            >
+              <option value="all">All Projects</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -486,6 +526,7 @@ ${companyTeam}`
                       <p className="font-bold text-xl text-white">{entry.first_name} {entry.last_name}</p>
                       <p className="text-white/70 text-sm">
                         {new Date(entry.clock_in).toLocaleDateString()} • {entry.location_name || 'N/A'}
+                        {entry.project_name && ` • ${entry.project_name}`}
                       </p>
                     </div>
                   </div>

@@ -4,7 +4,9 @@ import { database, auth } from '../lib/supabase'
 export default function TimeTracker({ session, employee }) {
   const [currentSession, setCurrentSession] = useState(null)
   const [locations, setLocations] = useState([])
+  const [projects, setProjects] = useState([])
   const [selectedLocation, setSelectedLocation] = useState('')
+  const [selectedProject, setSelectedProject] = useState('')
   const [currentTime, setCurrentTime] = useState(new Date())
   const [loading, setLoading] = useState(false)
   const [showBreakModal, setShowBreakModal] = useState(false)
@@ -57,11 +59,17 @@ export default function TimeTracker({ session, employee }) {
       const { data: sessionData } = await database.getCurrentSession(employee.id)
       setCurrentSession(sessionData)
 
-      // Load locations
+      // Load locations and projects
       console.log('Loading locations for organization:', employee.organization_id)
-      const { data: locationsData, error: locationsError } = await database.getLocations(employee.organization_id)
-      console.log('Locations result:', { locationsData, locationsError })
-      setLocations(locationsData || [])
+      const [locationsResult, projectsResult] = await Promise.all([
+        database.getLocations(employee.organization_id),
+        database.getClientProjects(employee.organization_id)
+      ])
+      
+      console.log('Locations result:', locationsResult)
+      console.log('Projects result:', projectsResult)
+      setLocations(locationsResult.data || [])
+      setProjects(projectsResult.data || [])
 
       // Load total hours for current week
       await loadTotalHours()
@@ -90,7 +98,11 @@ export default function TimeTracker({ session, employee }) {
 
     setLoading(true)
     try {
-      const { data, error } = await database.clockIn(employee.id, selectedLocation)
+      const { data, error } = await database.clockIn(
+        employee.id, 
+        selectedLocation, 
+        selectedProject || null
+      )
       if (error) throw error
       
       setCurrentSession(data)
@@ -352,6 +364,26 @@ export default function TimeTracker({ session, employee }) {
                     ))}
                   </select>
                 </div>
+                
+                {projects.length > 0 && (
+                  <div>
+                    <label className="block text-white/80 font-medium mb-3">
+                      Select Project (Optional)
+                    </label>
+                    <select
+                      value={selectedProject}
+                      onChange={(e) => setSelectedProject(e.target.value)}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
+                    >
+                      <option value="">No project selected</option>
+                      {projects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <button
                   onClick={handleClockIn}
                   disabled={loading || !selectedLocation}

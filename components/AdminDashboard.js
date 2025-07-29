@@ -1664,6 +1664,7 @@ function PasswordChangeModal({ onClose }) {
 
 function TimeManagementTab({ employees, locations, organizationId, onDataChange }) {
   const [timeSessions, setTimeSessions] = useState([])
+  const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(false)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -1708,6 +1709,19 @@ function TimeManagementTab({ employees, locations, organizationId, onDataChange 
   useEffect(() => {
     loadTimeSessions()
   }, [startDate, endDate, organizationId])
+
+  useEffect(() => {
+    const loadProjects = async () => {
+      try {
+        const { data, error } = await database.getClientProjects(organizationId)
+        if (error) throw error
+        setProjects(data || [])
+      } catch (error) {
+        console.error('Error loading projects:', error)
+      }
+    }
+    loadProjects()
+  }, [organizationId])
 
   const formatDuration = (clockIn, clockOut) => {
     if (!clockIn || !clockOut) return '0h 0m'
@@ -1819,6 +1833,7 @@ function TimeManagementTab({ employees, locations, organizationId, onDataChange 
                       <p className="font-bold text-xl text-white">{session.first_name} {session.last_name}</p>
                       <p className="text-white/70 text-sm">
                         {new Date(session.clock_in).toLocaleDateString()} • {session.location_name}
+                        {session.project_name && ` • ${session.project_name}`}
                       </p>
                       <p className="text-white/60 text-xs">
                         {new Date(session.clock_in).toLocaleTimeString()} - {session.clock_out ? new Date(session.clock_out).toLocaleTimeString() : 'In Progress'}
@@ -1873,6 +1888,7 @@ function TimeManagementTab({ employees, locations, organizationId, onDataChange 
           session={selectedSession}
           employees={employees}
           locations={locations}
+          projects={projects}
           onSave={async (updatedSession) => {
             try {
               const { error } = await database.updateTimeSession(selectedSession.id, updatedSession)
@@ -1899,6 +1915,7 @@ function TimeManagementTab({ employees, locations, organizationId, onDataChange 
         <AddTimeModal
           employees={employees}
           locations={locations}
+          projects={projects}
           onSave={async (newSession) => {
             try {
               const { error } = await database.createTimeSession(newSession)
@@ -1967,10 +1984,11 @@ function TimeManagementTab({ employees, locations, organizationId, onDataChange 
   )
 }
 
-function EditTimeModal({ session, employees, locations, onSave, onCancel }) {
+function EditTimeModal({ session, employees, locations, projects, onSave, onCancel }) {
   const [formData, setFormData] = useState({
     employee_id: session.employee_id,
     location_id: session.location_id || '',
+    project_id: session.project_id || '',
     clock_in: new Date(session.clock_in).toISOString().slice(0, 16),
     clock_out: session.clock_out ? new Date(session.clock_out).toISOString().slice(0, 16) : '',
     notes: session.notes || ''
@@ -1984,6 +2002,7 @@ function EditTimeModal({ session, employees, locations, onSave, onCancel }) {
     const updatedSession = {
       employee_id: formData.employee_id,
       location_id: formData.location_id || null,
+      project_id: formData.project_id || null,
       clock_in: new Date(formData.clock_in).toISOString(),
       clock_out: formData.clock_out ? new Date(formData.clock_out).toISOString() : null,
       notes: formData.notes || null
@@ -2047,6 +2066,26 @@ function EditTimeModal({ session, employees, locations, onSave, onCancel }) {
               ))}
             </select>
           </div>
+
+          {projects.length > 0 && (
+            <div>
+              <label className="block text-gray-700 font-medium mb-3">
+                🎯 Project (Optional)
+              </label>
+              <select
+                value={formData.project_id}
+                onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+              >
+                <option value="">No project</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-gray-700 font-medium mb-3">
@@ -2116,10 +2155,11 @@ function EditTimeModal({ session, employees, locations, onSave, onCancel }) {
   )
 }
 
-function AddTimeModal({ employees, locations, onSave, onCancel }) {
+function AddTimeModal({ employees, locations, projects, onSave, onCancel }) {
   const [formData, setFormData] = useState({
     employee_id: '',
     location_id: '',
+    project_id: '',
     clock_in: '',
     clock_out: '',
     notes: ''
@@ -2133,6 +2173,7 @@ function AddTimeModal({ employees, locations, onSave, onCancel }) {
     const newSession = {
       employee_id: formData.employee_id,
       location_id: formData.location_id || null,
+      project_id: formData.project_id || null,
       clock_in: new Date(formData.clock_in).toISOString(),
       clock_out: formData.clock_out ? new Date(formData.clock_out).toISOString() : null,
       notes: formData.notes || null
@@ -2197,6 +2238,26 @@ function AddTimeModal({ employees, locations, onSave, onCancel }) {
               ))}
             </select>
           </div>
+
+          {projects.length > 0 && (
+            <div>
+              <label className="block text-gray-700 font-medium mb-3">
+                🎯 Project (Optional)
+              </label>
+              <select
+                value={formData.project_id}
+                onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
+              >
+                <option value="">No project</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-gray-700 font-medium mb-3">
