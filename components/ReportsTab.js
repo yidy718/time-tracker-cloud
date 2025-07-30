@@ -12,6 +12,7 @@ export default function ReportsTab({ employees, organizationId, organization }) 
   const [reportData, setReportData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [showShareOptions, setShowShareOptions] = useState(false)
+  const [reportType, setReportType] = useState('combined') // 'time', 'tasks', 'combined'
 
   // Check if this is V.A.S Tri State organization
   const isVAS = organization?.name?.toLowerCase().includes('v.a.s') || organization?.name?.toLowerCase().includes('vas')
@@ -63,40 +64,53 @@ export default function ReportsTab({ employees, organizationId, organization }) 
   const generateReport = async () => {
     setLoading(true)
     try {
-      // Get time report data  
-      const { data, error } = await database.getTimeReport({
-        organization_id: organizationId,
-        employee_id: selectedEmployee === 'all' ? null : selectedEmployee,
-        project_id: selectedProject === 'all' ? null : selectedProject,
-        start_date: startDate,
-        end_date: endDate
-      })
+      let reportData = { timeData: [], taskSummary: [], completedTasks: [] }
 
-      // Get task summary data
-      let taskSummary = null
-      try {
-        const taskSummaryResult = await database.getTaskSummary(
-          organizationId,
-          selectedEmployee === 'all' ? null : selectedEmployee
-        )
-        taskSummary = taskSummaryResult.data || []
-      } catch (taskError) {
-        console.warn('Task analytics not available:', taskError)
+      // Get time report data if needed
+      if (reportType === 'time' || reportType === 'combined') {
+        const { data, error } = await database.getTimeReport({
+          organization_id: organizationId,
+          employee_id: selectedEmployee === 'all' ? null : selectedEmployee,
+          project_id: selectedProject === 'all' ? null : selectedProject,
+          start_date: startDate,
+          end_date: endDate
+        })
+
+        if (error) throw error
+        
+        // Filter by location if selected
+        let filteredData = data || []
+        if (selectedLocation !== 'all') {
+          const selectedLocationName = locations.find(loc => loc.id === selectedLocation)?.name
+          filteredData = filteredData.filter(entry => entry.location_name === selectedLocationName)
+        }
+        
+        reportData.timeData = filteredData
       }
 
-      if (error) throw error
-      
-      // Filter by location if selected
-      let filteredData = data || []
-      if (selectedLocation !== 'all') {
-        const selectedLocationName = locations.find(loc => loc.id === selectedLocation)?.name
-        filteredData = filteredData.filter(entry => entry.location_name === selectedLocationName)
+      // Get task data if needed
+      if (reportType === 'tasks' || reportType === 'combined') {
+        try {
+          const taskSummaryResult = await database.getTaskSummary(
+            organizationId,
+            selectedEmployee === 'all' ? null : selectedEmployee
+          )
+          reportData.taskSummary = taskSummaryResult.data || []
+
+          // Get completed tasks for the same date range
+          const completedTasksResult = await database.getCompletedTasks(
+            organizationId,
+            startDate,
+            endDate,
+            selectedEmployee === 'all' ? null : selectedEmployee
+          )
+          reportData.completedTasks = completedTasksResult.data || []
+        } catch (taskError) {
+          console.warn('Task analytics not available:', taskError)
+        }
       }
       
-      setReportData({
-        timeData: filteredData,
-        taskSummary: taskSummary
-      })
+      setReportData(reportData)
     } catch (error) {
       console.error('Error generating report:', error)
       alert('Error generating report. Please try again.')
@@ -267,7 +281,10 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
   }
 
   const generatePDF = async () => {
-    if (!reportData || reportData.length === 0) {
+    const hasTimeData = reportData?.timeData && reportData.timeData.length > 0
+    const hasTaskData = reportData?.completedTasks && reportData.completedTasks.length > 0
+    
+    if (!reportData || (!hasTimeData && !hasTaskData)) {
       alert('No data to generate PDF report')
       return
     }
@@ -291,7 +308,10 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
     
     pdf.setFontSize(16)
     pdf.setFont('helvetica', 'normal') 
-    pdf.text('Time Tracking Report', 20, 25)
+    const reportTitle = reportType === 'time' ? 'Time Tracking Report' : 
+                        reportType === 'tasks' ? 'Task Completion Report' : 
+                        'Time & Task Report'
+    pdf.text(reportTitle, 20, 25)
     
     if (isVAS) {
       pdf.setFontSize(12)
@@ -311,19 +331,37 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
     pdf.setFont('helvetica', 'bold')
     pdf.text('REPORT SUMMARY', 20, 55)
     
-    const totalHours = reportData.timeData.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0)
-    const totalPayroll = reportData.timeData.reduce((sum, entry) => {
-      const durationHours = (entry.duration_minutes || 0) / 60
-      const rate = entry.hourly_rate || 0
-      return sum + (durationHours * rate)
-    }, 0)
-    
     pdf.setFontSize(12)
     pdf.setFont('helvetica', 'normal')
-    pdf.text(`Total Entries: ${reportData.timeData.length}`, 20, 65)
-    pdf.text(`Total Hours: ${formatDuration(totalHours)}`, 20, 72)
-    pdf.text(`Total Payroll: $${totalPayroll.toFixed(2)}`, 20, 79)
-    pdf.text(`Average per Entry: ${formatDuration(reportData.length > 0 ? Math.round(totalHours / reportData.length) : 0)}`, 20, 86)
+    
+    let yOffset = 65
+    
+    // Time tracking summary (if included)
+    if (hasTimeData) {
+      const totalHours = reportData.timeData.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0)
+      const totalPayroll = reportData.timeData.reduce((sum, entry) => {
+        const durationHours = (entry.duration_minutes || 0) / 60
+        const rate = entry.hourly_rate || 0
+        return sum + (durationHours * rate)
+      }, 0)
+      
+      pdf.text(`Time Entries: ${reportData.timeData.length}`, 20, yOffset)
+      pdf.text(`Total Hours: ${formatDuration(totalHours)}`, 20, yOffset + 7)
+      pdf.text(`Total Payroll: $${totalPayroll.toFixed(2)}`, 20, yOffset + 14)
+      yOffset += 21
+    }
+    
+    // Task summary (if included)
+    if (hasTaskData) {
+      pdf.text(`Completed Tasks: ${reportData.completedTasks.length}`, 20, yOffset)
+      const totalTaskHours = reportData.completedTasks.reduce((sum, task) => sum + (parseFloat(task.actual_hours) || 0), 0)
+      if (totalTaskHours > 0) {
+        pdf.text(`Task Hours: ${totalTaskHours.toFixed(1)}h`, 20, yOffset + 7)
+        yOffset += 14
+      } else {
+        yOffset += 7
+      }
+    }
     
     // Filter info
     const selectedEmp = employees.find(emp => emp.id === selectedEmployee)
@@ -340,75 +378,150 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
       pdf.text(`Project: ${selectedProj?.name}`, 120, 79)
     }
     
-    // Detailed Time Entries - Manual Table Creation
-    pdf.setFontSize(16)
-    pdf.setFont('helvetica', 'bold')
-    pdf.text('DETAILED TIME ENTRIES', 20, 100)
+    let currentY = yOffset + 20
     
-    // Table headers
-    pdf.setFontSize(10)
-    pdf.setFont('helvetica', 'bold')
-    let yPos = 115
+    // Detailed Time Entries - Manual Table Creation (if included)
+    if (hasTimeData) {
+      pdf.setFontSize(16)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('DETAILED TIME ENTRIES', 20, currentY)
     
-    // Header background
-    pdf.setFillColor(88, 28, 135)
-    pdf.rect(20, yPos - 5, 170, 8, 'F')
+      // Table headers
+      pdf.setFontSize(10)
+      pdf.setFont('helvetica', 'bold')
+      let yPos = currentY + 15
     
-    // Header text
-    pdf.setTextColor(255, 255, 255)
-    pdf.text('Employee', 22, yPos)
-    pdf.text('Date', 48, yPos)
-    pdf.text('Hours', 65, yPos)
-    pdf.text('In/Out', 82, yPos)
-    pdf.text('Location', 105, yPos)
-    pdf.text('Project', 125, yPos)
-    pdf.text('Pay', 145, yPos)
-    pdf.text('Notes', 160, yPos)
-    
-    // Reset text color for data
-    pdf.setTextColor(0, 0, 0)
-    pdf.setFont('helvetica', 'normal')
-    pdf.setFontSize(8)
-    
-    yPos += 10
-    
-    // Table data
-    reportData.forEach((entry, index) => {
-      // Alternate row background
-      if (index % 2 === 0) {
-        pdf.setFillColor(245, 245, 245)
-        pdf.rect(20, yPos - 4, 170, 7, 'F')
-      }
+      // Header background
+      pdf.setFillColor(88, 28, 135)
+      pdf.rect(20, yPos - 5, 170, 8, 'F')
       
-      const durationHours = (entry.duration_minutes || 0) / 60
-      const rate = entry.hourly_rate || 0
-      const totalPay = durationHours * rate
+      // Header text
+      pdf.setTextColor(255, 255, 255)
+      pdf.text('Employee', 22, yPos)
+      pdf.text('Date', 48, yPos)
+      pdf.text('Hours', 65, yPos)
+      pdf.text('In/Out', 82, yPos)
+      pdf.text('Location', 105, yPos)
+      pdf.text('Project', 125, yPos)
+      pdf.text('Pay', 145, yPos)
+      pdf.text('Notes', 160, yPos)
       
-      // Row data
-      pdf.text(`${entry.first_name} ${entry.last_name}`.substring(0, 10), 22, yPos)
-      pdf.text(new Date(entry.clock_in).toLocaleDateString().substring(0, 6), 48, yPos)
-      pdf.text(formatDuration(entry.duration_minutes || 0), 65, yPos)
-      const timeRange = `${new Date(entry.clock_in).toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      })}-${entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      }) : 'Active'}`
-      pdf.text(timeRange.substring(0, 11), 82, yPos)
-      pdf.text((entry.location_name || 'N/A').substring(0, 7), 105, yPos)
-      pdf.text((entry.project_name || 'None').substring(0, 7), 125, yPos)
-      pdf.text(rate ? `$${totalPay.toFixed(0)}` : 'N/A', 145, yPos)
-      pdf.text((entry.notes || '').substring(0, 12), 160, yPos)
+      // Reset text color for data
+      pdf.setTextColor(0, 0, 0)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(8)
       
-      yPos += 7
+      yPos += 10
       
-      // Add new page if needed
-      if (yPos > 270) {
+      // Table data
+      reportData.timeData.forEach((entry, index) => {
+        // Alternate row background
+        if (index % 2 === 0) {
+          pdf.setFillColor(245, 245, 245)
+          pdf.rect(20, yPos - 4, 170, 7, 'F')
+        }
+        
+        const durationHours = (entry.duration_minutes || 0) / 60
+        const rate = entry.hourly_rate || 0
+        const totalPay = durationHours * rate
+        
+        // Row data
+        pdf.text(`${entry.first_name} ${entry.last_name}`.substring(0, 10), 22, yPos)
+        pdf.text(new Date(entry.clock_in).toLocaleDateString().substring(0, 6), 48, yPos)
+        pdf.text(formatDuration(entry.duration_minutes || 0), 65, yPos)
+        const timeRange = `${new Date(entry.clock_in).toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        })}-${entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }) : 'Active'}`
+        pdf.text(timeRange.substring(0, 11), 82, yPos)
+        pdf.text((entry.location_name || 'N/A').substring(0, 7), 105, yPos)
+        pdf.text((entry.project_name || 'None').substring(0, 7), 125, yPos)
+        pdf.text(rate ? `$${totalPay.toFixed(0)}` : 'N/A', 145, yPos)
+        pdf.text((entry.notes || '').substring(0, 12), 160, yPos)
+        
+        yPos += 7
+        
+        // Add new page if needed
+        if (yPos > 270) {
+          pdf.addPage()
+          yPos = 30
+        }
+      })
+      
+      currentY = yPos
+    }
+    
+    // Add completed tasks section if we have completed tasks data
+    if (hasTaskData) {
+      // Add some space or new page if needed
+      if (currentY > 220) {
         pdf.addPage()
-        yPos = 30
+        currentY = 30
+      } else {
+        currentY += 20
       }
-    })
+      
+      // Completed Tasks Section Header
+      pdf.setFontSize(16)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(0, 0, 0)
+      pdf.text(`COMPLETED TASKS (${reportData.completedTasks.length})`, 20, currentY)
+      
+      currentY += 15
+      
+      // Completed tasks data
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(10)
+      
+      reportData.completedTasks.forEach((task, index) => {
+        // Check if we need a new page
+        if (currentY > 250) {
+          pdf.addPage()
+          currentY = 30
+        }
+        
+        // Task title
+        pdf.setFont('helvetica', 'bold')
+        pdf.text(`${index + 1}. ${task.title.substring(0, 60)}`, 20, currentY)
+        currentY += 7
+        
+        // Task details
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(9)
+        
+        // Completed by and date
+        pdf.text(`Completed by: ${task.assigned_first_name} ${task.assigned_last_name}`, 25, currentY)
+        pdf.text(`Date: ${new Date(task.completed_at).toLocaleDateString()}`, 120, currentY)
+        currentY += 5
+        
+        // Project and priority
+        if (task.project_name) {
+          pdf.text(`Project: ${task.project_name.substring(0, 30)}`, 25, currentY)
+        }
+        pdf.text(`Priority: ${task.priority}`, 120, currentY)
+        currentY += 5
+        
+        // Hours if available
+        if (task.actual_hours || task.estimated_hours) {
+          const hoursText = task.actual_hours ? 
+            `${task.actual_hours}h actual${task.estimated_hours ? ` / ${task.estimated_hours}h est` : ''}` :
+            `${task.estimated_hours}h estimated`
+          pdf.text(`Time: ${hoursText}`, 25, currentY)
+          currentY += 5
+        }
+        
+        // Description if available and short enough
+        if (task.description && task.description.length < 80) {
+          pdf.text(`Description: ${task.description}`, 25, currentY)
+          currentY += 5
+        }
+        
+        currentY += 3 // Space between tasks
+      })
+    }
     
     // Footer
     const pageCount = pdf.internal.getNumberOfPages()
@@ -421,7 +534,10 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
     }
     
       // Download the PDF
-      const fileName = `${companyName.replace(/\s+/g, '-')}-Report-${startDate}-to-${endDate}.pdf`
+      const reportTypeLabel = reportType === 'time' ? 'Time-Report' : 
+                              reportType === 'tasks' ? 'Task-Report' : 
+                              'Combined-Report'
+      const fileName = `${companyName.replace(/\s+/g, '-')}-${reportTypeLabel}-${startDate}-to-${endDate}.pdf`
       console.log('💾 Saving PDF:', fileName)
       pdf.save(fileName)
       console.log('✅ PDF generated successfully!')
@@ -440,7 +556,50 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
           <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
             📈
           </div>
-          <h3 className="text-2xl font-bold text-white">Weekly Hours Report</h3>
+          <h3 className="text-2xl font-bold text-white">
+            {reportType === 'time' ? 'Time Tracking Report' : 
+             reportType === 'tasks' ? 'Task Completion Report' : 
+             'Time & Task Report'}
+          </h3>
+        </div>
+
+        {/* Report Type Selector */}
+        <div className="mb-6">
+          <label className="block text-white/80 font-medium mb-3">
+            Report Type
+          </label>
+          <div className="flex space-x-4">
+            <button
+              onClick={() => setReportType('combined')}
+              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105 ${
+                reportType === 'combined'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg'
+                  : 'bg-white/10 text-white/70 hover:bg-white/20'
+              }`}
+            >
+              📊 Time & Tasks
+            </button>
+            <button
+              onClick={() => setReportType('time')}
+              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105 ${
+                reportType === 'time'
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                  : 'bg-white/10 text-white/70 hover:bg-white/20'
+              }`}
+            >
+              ⏰ Time Only
+            </button>
+            <button
+              onClick={() => setReportType('tasks')}
+              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105 ${
+                reportType === 'tasks'
+                  ? 'bg-gradient-to-r from-green-500 to-teal-600 text-white shadow-lg'
+                  : 'bg-white/10 text-white/70 hover:bg-white/20'
+              }`}
+            >
+              ✅ Tasks Only
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
@@ -569,8 +728,11 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
             </div>
           </div>
 
-          <div className="space-y-4">
-            {reportData.timeData.map((entry, index) => (
+          {/* Time Tracking Section */}
+          {(reportType === 'time' || reportType === 'combined') && reportData.timeData && reportData.timeData.length > 0 && (
+            <div className="space-y-4">
+              <h5 className="text-lg font-bold text-white mb-4">⏰ Time Tracking Entries</h5>
+              {reportData.timeData.map((entry, index) => (
               <div 
                 key={entry.id} 
                 className="group bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-[1.02]"
@@ -607,11 +769,13 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Summary */}
-          <div className="mt-8 p-6 bg-white/5 rounded-2xl border border-white/10">
+          {(reportType === 'time' || reportType === 'combined') && reportData.timeData && reportData.timeData.length > 0 && (
+            <div className="mt-8 p-6 bg-white/5 rounded-2xl border border-white/10">
             <h5 className="text-lg font-bold text-white mb-4">📋 Summary</h5>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="text-center">
@@ -641,10 +805,71 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
                 </p>
               </div>
             </div>
-          </div>
+            </div>
+          )}
+
+          {/* Completed Tasks Section */}
+          {(reportType === 'tasks' || reportType === 'combined') && reportData.completedTasks && reportData.completedTasks.length > 0 && (
+            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 mt-6">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
+                  ✅
+                </div>
+                <h3 className="text-xl font-bold text-white">Completed Tasks ({reportData.completedTasks.length})</h3>
+              </div>
+
+              <div className="space-y-3">
+                {reportData.completedTasks.map((task, index) => (
+                  <div key={task.id} className="bg-white/5 p-4 rounded-lg border border-white/10">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h4 className="font-semibold text-white mb-1">{task.title}</h4>
+                        <p className="text-sm text-white/70">
+                          {task.project_name && `${task.project_name} • `}
+                          {task.client_name || 'No Client'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-green-400 font-medium">
+                          Completed by: {task.assigned_first_name} {task.assigned_last_name}
+                        </div>
+                        <div className="text-xs text-white/60">
+                          {new Date(task.completed_at).toLocaleDateString()} at {new Date(task.completed_at).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {task.description && (
+                      <p className="text-sm text-white/80 mb-2">{task.description}</p>
+                    )}
+                    
+                    <div className="flex justify-between items-center text-xs">
+                      <div className="flex space-x-4">
+                        <span className={`px-2 py-1 rounded-full ${
+                          task.priority === 'urgent' ? 'bg-red-500/20 text-red-300' :
+                          task.priority === 'high' ? 'bg-orange-500/20 text-orange-300' :
+                          task.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-300' :
+                          'bg-green-500/20 text-green-300'
+                        }`}>
+                          {task.priority}
+                        </span>
+                        <span className="text-white/60">
+                          Progress: {task.progress_percentage}%
+                        </span>
+                      </div>
+                      <div className="text-white/60">
+                        {task.actual_hours ? `${task.actual_hours}h actual` : 'No time logged'}
+                        {task.estimated_hours ? ` / ${task.estimated_hours}h estimated` : ''}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Task Analytics Section */}
-          {reportData.taskSummary && reportData.taskSummary.length > 0 && (
+          {(reportType === 'tasks' || reportType === 'combined') && reportData.taskSummary && reportData.taskSummary.length > 0 && (
             <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 mt-6">
               <div className="flex items-center space-x-3 mb-6">
                 <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-green-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
