@@ -349,7 +349,7 @@ export default function TimeTracker({ session, employee }) {
               }
             </span>
           </div>
-          <div className="text-6xl font-mono font-bold text-white mb-4">
+          <div className="text-4xl sm:text-5xl md:text-6xl font-mono font-bold text-white mb-4 text-center overflow-hidden">
             {currentSession 
               ? isOnBreak 
                 ? getBreakDuration() 
@@ -404,10 +404,22 @@ export default function TimeTracker({ session, employee }) {
                     </p>
                   )}
                 </div>
-                {/* Show selected project location */}
+                {/* Show selected project locations */}
                 {selectedProject && (
                   <div className="text-white/70 text-sm">
-                    📍 Location: {projects.find(p => p.id === selectedProject)?.location?.name || 'No location assigned'}
+                    {(() => {
+                      const project = projects.find(p => p.id === selectedProject)
+                      const locations = project?.available_locations || []
+                      const primaryLocation = project?.primary_location
+                      
+                      if (locations.length === 0) {
+                        return '📍 Location: No location assigned'
+                      } else if (locations.length === 1) {
+                        return `📍 Location: ${locations[0].name}`
+                      } else {
+                        return `📍 Locations: ${locations.length} available${primaryLocation ? ` (Primary: ${primaryLocation.name})` : ''}`
+                      }
+                    })()}
                   </div>
                 )}
                 

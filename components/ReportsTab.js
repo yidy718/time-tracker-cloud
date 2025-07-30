@@ -437,10 +437,10 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
               onChange={(e) => setSelectedEmployee(e.target.value)}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
             >
-              <option value="all">All Employees</option>
+              <option value="all" className="text-gray-900 bg-white">👥 All Employees</option>
               {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.first_name} {emp.last_name}
+                <option key={emp.id} value={emp.id} className="text-gray-900 bg-white">
+                  👤 {emp.first_name} {emp.last_name}
                 </option>
               ))}
             </select>
@@ -497,9 +497,9 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
               onChange={(e) => setSelectedProject(e.target.value)}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
             >
-              <option value="all" className="text-gray-800 bg-white">🔸 All Projects</option>
+              <option value="all" className="text-gray-900 bg-white">🔸 All Projects</option>
               {projects.map((project) => (
-                <option key={project.id} value={project.id} className="text-gray-800 bg-white">
+                <option key={project.id} value={project.id} className="text-gray-900 bg-white">
                   🎯 {project.project_name}
                 </option>
               ))}

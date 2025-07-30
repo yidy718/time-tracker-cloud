@@ -1156,11 +1156,17 @@ function EditEmployeeForm({ employee, organizationId, onSuccess, onCancel }) {
 function ClientProjectsTab({ clientProjects, onClientProjectsChange, organizationId }) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [showEditForm, setShowEditForm] = useState(false)
+  const [showLocationModal, setShowLocationModal] = useState(false)
   const [selectedProject, setSelectedProject] = useState(null)
 
   const editProject = (project) => {
     setSelectedProject(project)
     setShowEditForm(true)
+  }
+
+  const manageProjectLocations = (project) => {
+    setSelectedProject(project)
+    setShowLocationModal(true)
   }
 
   const deleteProject = async (projectId, projectName) => {
@@ -1208,9 +1214,22 @@ function ClientProjectsTab({ clientProjects, onClientProjectsChange, organizatio
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-lg sm:text-xl text-white truncate">{project.project_name}</p>
                     <p className="text-white/70 text-sm truncate">{project.client_name}</p>
-                    {project.location && (
-                      <p className="text-white/60 text-sm truncate">📍 {project.location.name}</p>
-                    )}
+                    {(() => {
+                      const locations = project.available_locations || []
+                      const primaryLocation = project.primary_location
+                      
+                      if (locations.length === 0) {
+                        return <p className="text-white/60 text-sm truncate">📍 No locations assigned</p>
+                      } else if (locations.length === 1) {
+                        return <p className="text-white/60 text-sm truncate">📍 {locations[0].name}</p>
+                      } else {
+                        return (
+                          <p className="text-white/60 text-sm truncate">
+                            📍 {locations.length} locations{primaryLocation ? ` (Primary: ${primaryLocation.name})` : ''}
+                          </p>
+                        )
+                      }
+                    })()}
                     <div className="flex items-center space-x-3 mt-1">
                       {project.project_code && (
                         <span className="px-2 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium">
@@ -1232,6 +1251,13 @@ function ClientProjectsTab({ clientProjects, onClientProjectsChange, organizatio
                     title="Edit Project"
                   >
                     ✏️ Edit
+                  </button>
+                  <button
+                    onClick={() => manageProjectLocations(project)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
+                    title="Manage Locations"
+                  >
+                    📍 Locations
                   </button>
                   <button
                     onClick={() => deleteProject(project.id, project.project_name)}
@@ -1274,6 +1300,22 @@ function ClientProjectsTab({ clientProjects, onClientProjectsChange, organizatio
           }}
           onCancel={() => {
             setShowEditForm(false)
+            setSelectedProject(null)
+          }}
+        />
+      )}
+
+      {showLocationModal && selectedProject && (
+        <ProjectLocationModal
+          project={selectedProject}
+          organizationId={organizationId}
+          onSuccess={() => {
+            setShowLocationModal(false)
+            setSelectedProject(null)
+            onClientProjectsChange()
+          }}
+          onCancel={() => {
+            setShowLocationModal(false)
             setSelectedProject(null)
           }}
         />
@@ -1838,7 +1880,11 @@ function TimeManagementTab({ employees, locations, organizationId, onDataChange 
 
           <div className="flex items-end">
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+                setShowEditModal(false)
+                setSelectedSession(null)
+                setShowAddModal(true)
+              }}
               className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-300 hover:scale-105 shadow-lg w-full"
             >
               ➕ Add Entry
@@ -2373,6 +2419,214 @@ function AddTimeModal({ employees, locations, projects, onSave, onCancel }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+function ProjectLocationModal({ project, organizationId, onSuccess, onCancel }) {
+  const [locations, setLocations] = useState([])
+  const [projectLocations, setProjectLocations] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    loadLocations()
+    loadProjectLocations()
+  }, [])
+
+  const loadLocations = async () => {
+    try {
+      const { data, error } = await database.getLocations(organizationId)
+      if (error) throw error
+      setLocations(data || [])
+    } catch (error) {
+      console.error('Error loading locations:', error)
+    }
+  }
+
+  const loadProjectLocations = async () => {
+    try {
+      const { data, error } = await database.getProjectLocations(project.id)
+      if (error) throw error
+      setProjectLocations(data || [])
+    } catch (error) {
+      console.error('Error loading project locations:', error)
+    }
+  }
+
+  const handleAddLocation = async (locationId) => {
+    setLoading(true)
+    try {
+      const isFirst = projectLocations.length === 0
+      const { error } = await database.addProjectLocation(project.id, locationId, isFirst)
+      if (error) throw error
+      
+      await loadProjectLocations()
+      alert('Location added successfully\!')
+    } catch (error) {
+      console.error('Error adding location:', error)
+      alert('Error adding location. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  const handleRemoveLocation = async (locationId) => {
+    if (\!confirm('Are you sure you want to remove this location from the project?')) return
+    
+    setLoading(true)
+    try {
+      const { error } = await database.removeProjectLocation(project.id, locationId)
+      if (error) throw error
+      
+      await loadProjectLocations()
+      alert('Location removed successfully\!')
+    } catch (error) {
+      console.error('Error removing location:', error)
+      alert('Error removing location. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  const handleSetPrimary = async (locationId) => {
+    setLoading(true)
+    try {
+      const { error } = await database.setPrimaryProjectLocation(project.id, locationId)
+      if (error) throw error
+      
+      await loadProjectLocations()
+      alert('Primary location updated successfully\!')
+    } catch (error) {
+      console.error('Error setting primary location:', error)
+      alert('Error setting primary location. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  const assignedLocationIds = projectLocations.map(pl => pl.location_id)
+  const availableLocations = locations.filter(loc => \!assignedLocationIds.includes(loc.id))
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl border border-white/20">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+              📍
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800">Manage Locations</h3>
+              <p className="text-gray-600">{project.project_name}</p>
+            </div>
+          </div>
+          <button
+            onClick={onCancel}
+            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="overflow-y-auto max-h-96 space-y-6">
+          {/* Current Locations */}
+          <div>
+            <h4 className="text-lg font-semibold text-gray-800 mb-4">Assigned Locations</h4>
+            {projectLocations.length > 0 ? (
+              <div className="space-y-3">
+                {projectLocations.map((pl) => (
+                  <div 
+                    key={pl.id} 
+                    className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+                          📍
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-800">
+                            {pl.location.name}
+                            {pl.is_primary && <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Primary</span>}
+                          </p>
+                          {pl.location.address && (
+                            <p className="text-sm text-gray-600">{pl.location.address}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        {\!pl.is_primary && (
+                          <button
+                            onClick={() => handleSetPrimary(pl.location_id)}
+                            disabled={loading}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                          >
+                            Set Primary
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleRemoveLocation(pl.location_id)}
+                          disabled={loading}
+                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <div className="text-4xl mb-2">📍</div>
+                <p>No locations assigned to this project</p>
+              </div>
+            )}
+          </div>
+
+          {/* Available Locations */}
+          {availableLocations.length > 0 && (
+            <div>
+              <h4 className="text-lg font-semibold text-gray-800 mb-4">Add Locations</h4>
+              <div className="space-y-3">
+                {availableLocations.map((location) => (
+                  <div 
+                    key={location.id} 
+                    className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-gray-400 to-gray-500 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+                          📍
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-800">{location.name}</p>
+                          {location.address && (
+                            <p className="text-sm text-gray-600">{location.address}</p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleAddLocation(location.id)}
+                        disabled={loading}
+                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 flex justify-end space-x-4">
+          <button
+            onClick={onSuccess}
+            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-6 rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg"
+          >
+            Done
+          </button>
+        </div>
       </div>
     </div>
   )
