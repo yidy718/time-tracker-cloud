@@ -501,6 +501,25 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
                   </div>
                 </div>
               </div>
+              
+              {/* Show edit form right after this employee if it's selected */}
+              {showEditForm && selectedEmployee && selectedEmployee.id === emp.id && (
+                <div className="mt-4">
+                  <EditEmployeeForm
+                    employee={selectedEmployee}
+                    organizationId={organizationId}
+                    onSuccess={() => {
+                      setShowEditForm(false)
+                      setSelectedEmployee(null)
+                      onEmployeesChange()
+                    }}
+                    onCancel={() => {
+                      setShowEditForm(false)
+                      setSelectedEmployee(null)
+                    }}
+                  />
+                </div>
+              )}
             </div>
           ))
         ) : (
@@ -511,22 +530,6 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
           </div>
         )}
       </div>
-
-      {showEditForm && selectedEmployee && (
-        <EditEmployeeForm
-          employee={selectedEmployee}
-          organizationId={organizationId}
-          onSuccess={() => {
-            setShowEditForm(false)
-            setSelectedEmployee(null)
-            onEmployeesChange()
-          }}
-          onCancel={() => {
-            setShowEditForm(false)
-            setSelectedEmployee(null)
-          }}
-        />
-      )}
     </div>
   )
 }
@@ -621,6 +624,24 @@ function LocationsTab({ locations, onLocationsChange, organizationId }) {
                   </button>
                 </div>
               </div>
+              
+              {/* Show edit form right after this location if it's selected */}
+              {showEditForm && selectedLocation && selectedLocation.id === location.id && (
+                <div className="mt-4">
+                  <EditLocationForm
+                    location={selectedLocation}
+                    onSuccess={() => {
+                      setShowEditForm(false)
+                      setSelectedLocation(null)
+                      onLocationsChange()
+                    }}
+                    onCancel={() => {
+                      setShowEditForm(false)
+                      setSelectedLocation(null)
+                    }}
+                  />
+                </div>
+              )}
             </div>
           ))
         ) : (
@@ -631,21 +652,6 @@ function LocationsTab({ locations, onLocationsChange, organizationId }) {
           </div>
         )}
       </div>
-
-      {showEditForm && selectedLocation && (
-        <EditLocationForm
-          location={selectedLocation}
-          onSuccess={() => {
-            setShowEditForm(false)
-            setSelectedLocation(null)
-            onLocationsChange()
-          }}
-          onCancel={() => {
-            setShowEditForm(false)
-            setSelectedLocation(null)
-          }}
-        />
-      )}
     </div>
   )
 }
@@ -1279,6 +1285,24 @@ function ClientProjectsTab({ clientProjects, onClientProjectsChange, organizatio
                   </button>
                 </div>
               </div>
+              
+              {/* Show edit form right after this project if it's selected */}
+              {showEditForm && selectedProject && selectedProject.id === project.id && (
+                <div className="mt-4">
+                  <EditClientProjectForm
+                    project={selectedProject}
+                    onSuccess={() => {
+                      setShowEditForm(false)
+                      setSelectedProject(null)
+                      onClientProjectsChange()
+                    }}
+                    onCancel={() => {
+                      setShowEditForm(false)
+                      setSelectedProject(null)
+                    }}
+                  />
+                </div>
+              )}
             </div>
           ))
         ) : (
@@ -1289,21 +1313,6 @@ function ClientProjectsTab({ clientProjects, onClientProjectsChange, organizatio
           </div>
         )}
       </div>
-
-      {showEditForm && selectedProject && (
-        <EditClientProjectForm
-          project={selectedProject}
-          onSuccess={() => {
-            setShowEditForm(false)
-            setSelectedProject(null)
-            onClientProjectsChange()
-          }}
-          onCancel={() => {
-            setShowEditForm(false)
-            setSelectedProject(null)
-          }}
-        />
-      )}
 
       {showLocationModal && selectedProject && (
         <ProjectLocationModal
