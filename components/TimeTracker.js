@@ -59,15 +59,28 @@ export default function TimeTracker({ session, employee }) {
     }
   }, [employee.organization_id, employee.id])
 
-  const loadTasks = useCallback(async () => {
+  const loadTasks = useCallback(async (projectId = null) => {
     try {
       // Load employee's assigned tasks
       const employeeTasksResult = await database.getEmployeeTasks(employee.id, null)
-      setEmployeeTasks(employeeTasksResult.data || [])
+      let employeeTasks = employeeTasksResult.data || []
 
       // Load available tasks from task pool
       const availableTasksResult = await database.getAvailableTasks(employee.organization_id)
-      setAvailableTasks(availableTasksResult.data || [])
+      let availableTasks = availableTasksResult.data || []
+
+      // Filter tasks by project if clocked into a specific project
+      if (projectId) {
+        employeeTasks = employeeTasks.filter(task => 
+          task.project_id === projectId || task.project_id === null // Include unassigned tasks
+        )
+        availableTasks = availableTasks.filter(task => 
+          task.project_id === projectId || task.project_id === null // Include unassigned tasks
+        )
+      }
+
+      setEmployeeTasks(employeeTasks)
+      setAvailableTasks(availableTasks)
     } catch (error) {
       console.error('Error loading tasks:', error)
     }
@@ -166,6 +179,9 @@ export default function TimeTracker({ session, employee }) {
       if (error) throw error
       
       setCurrentSession(data)
+      
+      // Load tasks filtered by the selected project
+      await loadTasks(selectedProject)
       
       // Show task selection modal after successful clock-in
       setShowTaskSelection(true)
