@@ -38,7 +38,7 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
         return
       }
       
-      alert('Task picked up successfully!')
+      // Task picked up - no need for popup
       await loadTasks()
     } catch (error) {
       console.error('Error picking up task:', error)

@@ -407,7 +407,7 @@ function TaskCreateModal({ employees, projects, onSubmit, onClose }) {
                 required
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
               />
             </div>
 
@@ -417,7 +417,7 @@ function TaskCreateModal({ employees, projects, onSubmit, onClose }) {
                 rows={3}
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
               />
             </div>
 
@@ -427,7 +427,7 @@ function TaskCreateModal({ employees, projects, onSubmit, onClose }) {
                 <select
                   value={formData.priority}
                   onChange={(e) => setFormData({...formData, priority: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -444,7 +444,7 @@ function TaskCreateModal({ employees, projects, onSubmit, onClose }) {
                   min="0"
                   value={formData.estimated_hours}
                   onChange={(e) => setFormData({...formData, estimated_hours: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
                 />
               </div>
             </div>
@@ -455,7 +455,7 @@ function TaskCreateModal({ employees, projects, onSubmit, onClose }) {
                 type="datetime-local"
                 value={formData.due_date}
                 onChange={(e) => setFormData({...formData, due_date: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
               />
             </div>
 
@@ -464,7 +464,7 @@ function TaskCreateModal({ employees, projects, onSubmit, onClose }) {
               <select
                 value={formData.project_id}
                 onChange={(e) => setFormData({...formData, project_id: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
               >
                 <option value="">No Project</option>
                 {projects.map(project => (
@@ -480,7 +480,7 @@ function TaskCreateModal({ employees, projects, onSubmit, onClose }) {
               <select
                 value={formData.assigned_to}
                 onChange={(e) => setFormData({...formData, assigned_to: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
               >
                 <option value="">Unassigned</option>
                 {employees.map(emp => (
@@ -570,7 +570,7 @@ function TaskEditModal({ task, employees, projects, onSubmit, onClose }) {
                 required
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
               />
             </div>
 
@@ -580,7 +580,7 @@ function TaskEditModal({ task, employees, projects, onSubmit, onClose }) {
                 rows={3}
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
               />
             </div>
 
@@ -590,7 +590,7 @@ function TaskEditModal({ task, employees, projects, onSubmit, onClose }) {
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({...formData, status: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
                 >
                   <option value="not_started">Not Started</option>
                   <option value="in_progress">In Progress</option>
@@ -605,7 +605,7 @@ function TaskEditModal({ task, employees, projects, onSubmit, onClose }) {
                 <select
                   value={formData.priority}
                   onChange={(e) => setFormData({...formData, priority: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -624,7 +624,7 @@ function TaskEditModal({ task, employees, projects, onSubmit, onClose }) {
                   min="0"
                   value={formData.estimated_hours}
                   onChange={(e) => setFormData({...formData, estimated_hours: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
                 />
               </div>
 
@@ -636,7 +636,7 @@ function TaskEditModal({ task, employees, projects, onSubmit, onClose }) {
                   max="100"
                   value={formData.progress_percentage}
                   onChange={(e) => setFormData({...formData, progress_percentage: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
                 />
               </div>
             </div>
@@ -647,7 +647,7 @@ function TaskEditModal({ task, employees, projects, onSubmit, onClose }) {
                 type="datetime-local"
                 value={formData.due_date}
                 onChange={(e) => setFormData({...formData, due_date: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
               />
             </div>
 
@@ -656,7 +656,7 @@ function TaskEditModal({ task, employees, projects, onSubmit, onClose }) {
               <select
                 value={formData.project_id}
                 onChange={(e) => setFormData({...formData, project_id: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
               >
                 <option value="">No Project</option>
                 {projects.map(project => (
@@ -672,7 +672,7 @@ function TaskEditModal({ task, employees, projects, onSubmit, onClose }) {
               <select
                 value={formData.assigned_to}
                 onChange={(e) => setFormData({...formData, assigned_to: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 [&>option]:text-gray-900 [&>option]:bg-white"
               >
                 <option value="">Unassigned</option>
                 {employees.map(emp => (

@@ -206,7 +206,7 @@ export default function TimeTracker({ session, employee }) {
       
       setShowTaskSelection(false)
       setSelectedTask('')
-      alert(taskId ? 'Task selected! You can now work on this task.' : 'Clocked in successfully! You can work on general project tasks.')
+      // Task selection completed - no need for popup
       
     } catch (error) {
       console.error('Error linking task:', error)
@@ -257,7 +257,7 @@ export default function TimeTracker({ session, employee }) {
       setClockOutMemo('')
       setTaskProgress(0)
       setTaskNotes('')
-      alert('Clocked out successfully!')
+      // Clock out completed - no need for popup
       await loadTotalHours()
       await loadTasks() // Refresh tasks to show updated progress
     } catch (error) {
