@@ -414,6 +414,17 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
         </button>
       </div>
 
+      {showAddForm && (
+        <AddEmployeeForm
+          organizationId={organizationId}
+          onSuccess={() => {
+            setShowAddForm(false)
+            onEmployeesChange()
+          }}
+          onCancel={() => setShowAddForm(false)}
+        />
+      )}
+
       <div className="space-y-4">
         {employees.length > 0 ? (
           employees.map((emp, index) => (
@@ -501,17 +512,6 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
         )}
       </div>
 
-      {showAddForm && (
-        <AddEmployeeForm
-          organizationId={organizationId}
-          onSuccess={() => {
-            setShowAddForm(false)
-            onEmployeesChange()
-          }}
-          onCancel={() => setShowAddForm(false)}
-        />
-      )}
-
       {showEditForm && selectedEmployee && (
         <EditEmployeeForm
           employee={selectedEmployee}
@@ -570,6 +570,17 @@ function LocationsTab({ locations, onLocationsChange, organizationId }) {
         </button>
       </div>
 
+      {showAddForm && (
+        <AddLocationForm
+          organizationId={organizationId}
+          onSuccess={() => {
+            setShowAddForm(false)
+            onLocationsChange()
+          }}
+          onCancel={() => setShowAddForm(false)}
+        />
+      )}
+
       <div className="space-y-4">
         {locations.length > 0 ? (
           locations.map((location, index) => (
@@ -620,17 +631,6 @@ function LocationsTab({ locations, onLocationsChange, organizationId }) {
           </div>
         )}
       </div>
-
-      {showAddForm && (
-        <AddLocationForm
-          organizationId={organizationId}
-          onSuccess={() => {
-            setShowAddForm(false)
-            onLocationsChange()
-          }}
-          onCancel={() => setShowAddForm(false)}
-        />
-      )}
 
       {showEditForm && selectedLocation && (
         <EditLocationForm
@@ -1198,6 +1198,17 @@ function ClientProjectsTab({ clientProjects, onClientProjectsChange, organizatio
         </button>
       </div>
 
+      {showAddForm && (
+        <AddClientProjectForm
+          organizationId={organizationId}
+          onSuccess={() => {
+            setShowAddForm(false)
+            onClientProjectsChange()
+          }}
+          onCancel={() => setShowAddForm(false)}
+        />
+      )}
+
       <div className="space-y-4">
         {clientProjects.length > 0 ? (
           clientProjects.map((project, index) => (
@@ -1278,17 +1289,6 @@ function ClientProjectsTab({ clientProjects, onClientProjectsChange, organizatio
           </div>
         )}
       </div>
-
-      {showAddForm && (
-        <AddClientProjectForm
-          organizationId={organizationId}
-          onSuccess={() => {
-            setShowAddForm(false)
-            onClientProjectsChange()
-          }}
-          onCancel={() => setShowAddForm(false)}
-        />
-      )}
 
       {showEditForm && selectedProject && (
         <EditClientProjectForm
