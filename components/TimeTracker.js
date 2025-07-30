@@ -1146,15 +1146,38 @@ function ClockOutModal({ memo, onMemoChange, taskProgress, onTaskProgressChange,
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Update Progress (%)
                   </label>
-                  <input
-                    type="number"
-                    min={currentTask.progress_percentage}
-                    max="100"
-                    value={taskProgress || currentTask.progress_percentage}
-                    onChange={(e) => onTaskProgressChange(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    placeholder={currentTask.progress_percentage.toString()}
-                  />
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={currentTask.progress_percentage}
+                      max="100"
+                      step="1"
+                      value={taskProgress || currentTask.progress_percentage}
+                      onChange={(e) => onTaskProgressChange(parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-3 text-lg bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      placeholder={currentTask.progress_percentage.toString()}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="off"
+                      onFocus={(e) => e.target.select()}
+                    />
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex flex-col">
+                      <button
+                        type="button"
+                        onClick={() => onTaskProgressChange(Math.min(100, (taskProgress || currentTask.progress_percentage) + 5))}
+                        className="w-6 h-6 bg-gray-100 hover:bg-gray-200 rounded text-xs font-bold text-gray-600 flex items-center justify-center"
+                      >
+                        +
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onTaskProgressChange(Math.max(currentTask.progress_percentage, (taskProgress || currentTask.progress_percentage) - 5))}
+                        className="w-6 h-6 bg-gray-100 hover:bg-gray-200 rounded text-xs font-bold text-gray-600 flex items-center justify-center mt-1"
+                      >
+                        -
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 <div>
