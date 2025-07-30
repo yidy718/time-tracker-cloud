@@ -455,10 +455,10 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
               onChange={(e) => setSelectedLocation(e.target.value)}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
             >
-              <option value="all">All Locations</option>
+              <option value="all" className="text-gray-900 bg-white">📍 All Locations</option>
               {locations.map((loc) => (
-                <option key={loc.id} value={loc.id}>
-                  {loc.name}
+                <option key={loc.id} value={loc.id} className="text-gray-900 bg-white">
+                  🏢 {loc.name}
                 </option>
               ))}
             </select>
