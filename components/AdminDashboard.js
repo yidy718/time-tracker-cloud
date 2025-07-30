@@ -2462,7 +2462,7 @@ function ProjectLocationModal({ project, organizationId, onSuccess, onCancel }) 
       if (error) throw error
       
       await loadProjectLocations()
-      alert('Location added successfully\!')
+      alert('Location added successfully!')
     } catch (error) {
       console.error('Error adding location:', error)
       alert('Error adding location. Please try again.')
@@ -2471,7 +2471,7 @@ function ProjectLocationModal({ project, organizationId, onSuccess, onCancel }) 
   }
 
   const handleRemoveLocation = async (locationId) => {
-    if (\!confirm('Are you sure you want to remove this location from the project?')) return
+    if (!confirm('Are you sure you want to remove this location from the project?')) return
     
     setLoading(true)
     try {
@@ -2479,7 +2479,7 @@ function ProjectLocationModal({ project, organizationId, onSuccess, onCancel }) 
       if (error) throw error
       
       await loadProjectLocations()
-      alert('Location removed successfully\!')
+      alert('Location removed successfully!')
     } catch (error) {
       console.error('Error removing location:', error)
       alert('Error removing location. Please try again.')
@@ -2494,7 +2494,7 @@ function ProjectLocationModal({ project, organizationId, onSuccess, onCancel }) 
       if (error) throw error
       
       await loadProjectLocations()
-      alert('Primary location updated successfully\!')
+      alert('Primary location updated successfully!')
     } catch (error) {
       console.error('Error setting primary location:', error)
       alert('Error setting primary location. Please try again.')
@@ -2503,7 +2503,7 @@ function ProjectLocationModal({ project, organizationId, onSuccess, onCancel }) 
   }
 
   const assignedLocationIds = projectLocations.map(pl => pl.location_id)
-  const availableLocations = locations.filter(loc => \!assignedLocationIds.includes(loc.id))
+  const availableLocations = locations.filter(loc => !assignedLocationIds.includes(loc.id))
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -2553,7 +2553,7 @@ function ProjectLocationModal({ project, organizationId, onSuccess, onCancel }) 
                         </div>
                       </div>
                       <div className="flex space-x-2">
-                        {\!pl.is_primary && (
+                        {!pl.is_primary && (
                           <button
                             onClick={() => handleSetPrimary(pl.location_id)}
                             disabled={loading}
