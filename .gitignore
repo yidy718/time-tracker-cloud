@@ -42,6 +42,13 @@ temp*.sql
 *.backup
 *.dump
 *.dmp
+*BACKUP*
+*backup*
+easy-backup.sh
+STEP_BY_STEP_BACKUP.md
+WORKING_BACKUP_SCRIPT.sql
+setup-automated-backup.md
+project-location-modal.js
 
 # Security sensitive files
 *.key
