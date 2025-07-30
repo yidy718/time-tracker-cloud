@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { database, auth } from '../lib/supabase'
+import EmployeeTaskDashboard from './EmployeeTaskDashboard'
 
 export default function TimeTracker({ session, employee }) {
   const [currentSession, setCurrentSession] = useState(null)
@@ -18,6 +19,13 @@ export default function TimeTracker({ session, employee }) {
   const [weeklyActivities, setWeeklyActivities] = useState([])
   const [showClockOutModal, setShowClockOutModal] = useState(false)
   const [clockOutMemo, setClockOutMemo] = useState('')
+  const [availableTasks, setAvailableTasks] = useState([])
+  const [employeeTasks, setEmployeeTasks] = useState([])
+  const [selectedTask, setSelectedTask] = useState('')
+  const [showTaskSelection, setShowTaskSelection] = useState(false)
+  const [taskProgress, setTaskProgress] = useState(0)
+  const [taskNotes, setTaskNotes] = useState('')
+  const [showTaskDashboard, setShowTaskDashboard] = useState(false)
 
   const loadTotalHours = useCallback(async () => {
     try {
@@ -50,6 +58,20 @@ export default function TimeTracker({ session, employee }) {
       console.error('Error loading total hours:', error)
     }
   }, [employee.organization_id, employee.id])
+
+  const loadTasks = useCallback(async () => {
+    try {
+      // Load employee's assigned tasks
+      const employeeTasksResult = await database.getEmployeeTasks(employee.id, null)
+      setEmployeeTasks(employeeTasksResult.data || [])
+
+      // Load available tasks from task pool
+      const availableTasksResult = await database.getAvailableTasks(employee.organization_id)
+      setAvailableTasks(availableTasksResult.data || [])
+    } catch (error) {
+      console.error('Error loading tasks:', error)
+    }
+  }, [employee.id, employee.organization_id])
 
   const loadData = useCallback(async () => {
     try {
@@ -109,10 +131,13 @@ export default function TimeTracker({ session, employee }) {
 
       // Load total hours for current week
       await loadTotalHours()
+      
+      // Load tasks
+      await loadTasks()
     } catch (error) {
       console.error('Error loading data:', error)
     }
-  }, [employee.id, employee.organization_id, loadTotalHours])
+  }, [employee.id, employee.organization_id, loadTotalHours, loadTasks])
 
   useEffect(() => {
     // Update current time every second
@@ -141,12 +166,37 @@ export default function TimeTracker({ session, employee }) {
       if (error) throw error
       
       setCurrentSession(data)
-      alert('Clocked in successfully!')
+      
+      // Show task selection modal after successful clock-in
+      setShowTaskSelection(true)
+      
     } catch (error) {
       console.error('Clock in error:', error)
       alert('Error clocking in. Please try again.')
     }
     setLoading(false)
+  }
+
+  const handleTaskSelection = async (taskId = null) => {
+    try {
+      if (taskId && currentSession) {
+        // Link task to current session
+        await database.linkTaskToSession(taskId, currentSession.id, 0, 0, '')
+        
+        // Update current session to include task
+        const updatedSession = { ...currentSession, task_id: taskId }
+        setCurrentSession(updatedSession)
+      }
+      
+      setShowTaskSelection(false)
+      setSelectedTask('')
+      alert(taskId ? 'Task selected! You can now work on this task.' : 'Clocked in successfully! You can work on general project tasks.')
+      
+    } catch (error) {
+      console.error('Error linking task:', error)
+      alert('Error selecting task, but you are clocked in.')
+      setShowTaskSelection(false)
+    }
   }
 
   const handleClockOut = () => {
@@ -159,16 +209,41 @@ export default function TimeTracker({ session, employee }) {
 
     setLoading(true)
     try {
+      // Clock out from time session
       const { data, error } = await database.clockOut(currentSession.id, clockOutMemo.trim() || null)
       if (error) throw error
+      
+      // If working on a task, update task progress
+      if (currentSession.task_id && taskProgress > 0) {
+        try {
+          await database.updateTask(currentSession.task_id, {
+            progress_percentage: taskProgress
+          })
+          
+          // Add comment about work done
+          if (taskNotes.trim()) {
+            await database.addTaskComment(
+              currentSession.task_id,
+              employee.id,
+              taskNotes.trim()
+            )
+          }
+        } catch (taskError) {
+          console.error('Error updating task:', taskError)
+          // Don't fail clock out if task update fails
+        }
+      }
       
       setCurrentSession(null)
       setIsOnBreak(false)
       setBreakStartTime(null)
       setShowClockOutModal(false)
       setClockOutMemo('')
+      setTaskProgress(0)
+      setTaskNotes('')
       alert('Clocked out successfully!')
       await loadTotalHours()
+      await loadTasks() // Refresh tasks to show updated progress
     } catch (error) {
       console.error('Clock out error:', error)
       alert('Error clocking out. Please try again.')
@@ -290,6 +365,16 @@ export default function TimeTracker({ session, employee }) {
                   />
                   <div className="fixed top-20 right-4 left-4 sm:left-auto sm:right-4 w-auto sm:w-64 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-[10000] transform transition-all duration-300 scale-100 opacity-100">
                     <div className="p-4">
+                      <button
+                        onClick={() => {
+                          setShowTaskDashboard(true)
+                          setShowMenu(false)
+                        }}
+                        className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <span className="text-lg">📋</span>
+                        <span className="font-medium text-gray-700">My Tasks</span>
+                      </button>
                       <button
                         onClick={() => {
                           setShowWeeklyActivities(true)
@@ -554,15 +639,42 @@ export default function TimeTracker({ session, employee }) {
         />
       )}
 
+      {/* Employee Task Dashboard */}
+      {showTaskDashboard && (
+        <EmployeeTaskDashboard
+          employee={employee}
+          onClose={() => setShowTaskDashboard(false)}
+        />
+      )}
+
+      {/* Task Selection Modal */}
+      {showTaskSelection && (
+        <TaskSelectionModal
+          employeeTasks={employeeTasks}
+          availableTasks={availableTasks}
+          selectedTask={selectedTask}
+          onTaskChange={setSelectedTask}
+          onConfirm={() => handleTaskSelection(selectedTask)}
+          onSkip={() => handleTaskSelection(null)}
+        />
+      )}
+
       {/* Clock Out Modal */}
       {showClockOutModal && (
         <ClockOutModal 
           memo={clockOutMemo}
           onMemoChange={setClockOutMemo}
+          taskProgress={taskProgress}
+          onTaskProgressChange={setTaskProgress}
+          taskNotes={taskNotes}
+          onTaskNotesChange={setTaskNotes}
+          currentTask={currentSession?.task_id ? employeeTasks.find(t => t.id === currentSession.task_id) || availableTasks.find(t => t.id === currentSession.task_id) : null}
           onConfirm={confirmClockOut}
           onCancel={() => {
             setShowClockOutModal(false)
             setClockOutMemo('')
+            setTaskProgress(0)
+            setTaskNotes('')
           }}
           loading={loading}
         />
@@ -838,7 +950,153 @@ function WeeklyActivitiesModal({ activities, employee, onClose }) {
   )
 }
 
-function ClockOutModal({ memo, onMemoChange, onConfirm, onCancel, loading }) {
+function TaskSelectionModal({ employeeTasks, availableTasks, selectedTask, onTaskChange, onConfirm, onSkip }) {
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-2xl w-full shadow-2xl border border-white/20 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-green-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+              📋
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800">Select a Task</h3>
+              <p className="text-gray-600">Choose a task to work on, or skip to work on general project tasks</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {/* Employee's Assigned Tasks */}
+          {employeeTasks.length > 0 && (
+            <div>
+              <h4 className="text-lg font-semibold text-gray-800 mb-3">📌 Your Assigned Tasks</h4>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {employeeTasks.filter(task => task.status !== 'completed').map(task => (
+                  <label key={task.id} className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                    selectedTask === task.id 
+                      ? 'border-teal-500 bg-teal-50' 
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="task"
+                      value={task.id}
+                      checked={selectedTask === task.id}
+                      onChange={(e) => onTaskChange(e.target.value)}
+                      className="sr-only"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <h5 className="font-medium text-gray-900">{task.title}</h5>
+                        <div className="flex items-center space-x-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            task.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                            task.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                            task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {task.priority.toUpperCase()}
+                          </span>
+                          <span className="text-xs text-gray-500">{task.progress_percentage}%</span>
+                        </div>
+                      </div>
+                      {task.description && (
+                        <p className="text-gray-600 text-sm mt-1 line-clamp-2">{task.description}</p>
+                      )}
+                      {task.due_date && (
+                        <p className={`text-xs mt-1 ${task.is_overdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                          Due: {new Date(task.due_date).toLocaleDateString()}
+                          {task.is_overdue && ' (OVERDUE)'}
+                        </p>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Available Tasks from Pool */}
+          {availableTasks.length > 0 && (
+            <div>
+              <h4 className="text-lg font-semibold text-gray-800 mb-3">🏊 Available Task Pool</h4>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {availableTasks.filter(task => task.status !== 'completed').map(task => (
+                  <label key={task.id} className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                    selectedTask === task.id 
+                      ? 'border-teal-500 bg-teal-50' 
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="task"
+                      value={task.id}
+                      checked={selectedTask === task.id}
+                      onChange={(e) => onTaskChange(e.target.value)}
+                      className="sr-only"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <h5 className="font-medium text-gray-900">{task.title}</h5>
+                        <div className="flex items-center space-x-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            task.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                            task.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                            task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {task.priority.toUpperCase()}
+                          </span>
+                          <span className="text-xs text-gray-500">{task.progress_percentage}%</span>
+                        </div>
+                      </div>
+                      {task.description && (
+                        <p className="text-gray-600 text-sm mt-1 line-clamp-2">{task.description}</p>
+                      )}
+                      {task.due_date && (
+                        <p className={`text-xs mt-1 ${task.is_overdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                          Due: {new Date(task.due_date).toLocaleDateString()}
+                          {task.is_overdue && ' (OVERDUE)'}
+                        </p>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {employeeTasks.length === 0 && availableTasks.length === 0 && (
+            <div className="text-center py-8">
+              <div className="text-gray-400 text-4xl mb-4">📭</div>
+              <p className="text-gray-600">No tasks available at the moment.</p>
+              <p className="text-gray-500 text-sm mt-2">You can work on general project tasks.</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4 pt-6 border-t">
+            <button
+              onClick={onSkip}
+              className="bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200 transition-all duration-300"
+            >
+              ⏭️ Skip - Work on Project
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={!selectedTask}
+              className="bg-gradient-to-r from-teal-500 to-green-600 text-white py-3 rounded-xl font-medium hover:from-teal-600 hover:to-green-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              ✅ Select Task
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ClockOutModal({ memo, onMemoChange, taskProgress, onTaskProgressChange, taskNotes, onTaskNotesChange, currentTask, onConfirm, onCancel, loading }) {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20">
@@ -858,16 +1116,57 @@ function ClockOutModal({ memo, onMemoChange, onConfirm, onCancel, loading }) {
         </div>
 
         <div className="space-y-6">
+          {/* Task Progress Section */}
+          {currentTask && (
+            <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
+              <h4 className="font-semibold text-gray-800 mb-2">📋 Task Progress</h4>
+              <div className="mb-3">
+                <p className="text-sm text-gray-700 font-medium">{currentTask.title}</p>
+                <p className="text-xs text-gray-500">Current: {currentTask.progress_percentage}%</p>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Update Progress (%)
+                  </label>
+                  <input
+                    type="number"
+                    min={currentTask.progress_percentage}
+                    max="100"
+                    value={taskProgress || currentTask.progress_percentage}
+                    onChange={(e) => onTaskProgressChange(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder={currentTask.progress_percentage.toString()}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Work Notes
+                  </label>
+                  <textarea
+                    value={taskNotes}
+                    onChange={(e) => onTaskNotesChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+                    rows="2"
+                    placeholder="What did you accomplish on this task?"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-gray-700 font-medium mb-3">
-              📝 Add a memo about what you accomplished today (optional)
+              📝 General work memo (optional)
             </label>
             <textarea
               value={memo}
               onChange={(e) => onMemoChange(e.target.value)}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300 resize-none"
-              rows="4"
-              placeholder="What did you work on today? Any notes for your manager..."
+              rows="3"
+              placeholder="Additional notes about your work session..."
             />
           </div>
 

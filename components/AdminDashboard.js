@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { database, auth } from '../lib/supabase'
 import ReportsTab from './ReportsTab'
+import TaskManagement from './TaskManagement'
 
 export default function AdminDashboard({ session, employee }) {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -140,6 +141,7 @@ export default function AdminDashboard({ session, employee }) {
             {[
               { id: 'dashboard', name: 'Dashboard', emoji: '📊', color: 'from-blue-500 to-purple-600' },
               { id: 'reports', name: 'Reports', emoji: '📈', color: 'from-purple-500 to-pink-600' },
+              { id: 'tasks', name: 'Tasks', emoji: '📋', color: 'from-teal-500 to-green-600' },
               { id: 'timemanagement', name: 'Time Mgmt', emoji: '⏰', color: 'from-red-500 to-orange-600' },
               { id: 'employees', name: 'Employees', emoji: '👥', color: 'from-orange-500 to-red-600' },
               { id: 'locations', name: 'Locations', emoji: '📍', color: 'from-green-500 to-blue-600' },
@@ -177,6 +179,10 @@ export default function AdminDashboard({ session, employee }) {
             organizationId={employee.organization_id}
             organization={employee.organization}
           />
+        )}
+
+        {activeTab === 'tasks' && (
+          <TaskManagement employee={employee} />
         )}
 
         {activeTab === 'timemanagement' && (
