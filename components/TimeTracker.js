@@ -95,10 +95,8 @@ export default function TimeTracker({ session, employee, organization }) {
       const { data: sessionData } = await database.getCurrentSession(employee.id)
       setCurrentSession(sessionData)
 
-      // Check if expenses are enabled for this organization
-      if (organization) {
-        setExpensesEnabled(organization.enable_expenses || false)
-      }
+      // Check if expenses are enabled for this employee
+      setExpensesEnabled(employee.can_expense || false)
 
       // Load projects (locations come from projects now)
       console.log('Loading projects for organization:', employee.organization_id)

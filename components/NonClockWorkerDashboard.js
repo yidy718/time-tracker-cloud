@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { database } from '../lib/supabase'
 import EmployeeTaskDashboard from './EmployeeTaskDashboard'
 import ExpenseEntry from './ExpenseEntry'
+import ActivityLogger from './ActivityLogger'
 
 export default function NonClockWorkerDashboard({ session, employee, organization }) {
-  const [activeTab, setActiveTab] = useState('tasks')
+  const [activeTab, setActiveTab] = useState('overview')
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [expensesEnabled, setExpensesEnabled] = useState(false)
@@ -13,9 +14,8 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
     try {
       setLoading(true)
       
-      // Check if expenses are enabled for this organization
-      const { data: orgData } = await database.getOrganization(employee.organization_id)
-      setExpensesEnabled(orgData?.enable_expenses || false)
+      // Check if expenses are enabled for this employee
+      setExpensesEnabled(employee.can_expense || false)
       
       // Load employee tasks
       const tasksResult = await database.getEmployeeTasks(employee.id, employee.organization_id)
@@ -100,6 +100,16 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8">
             <button
+              onClick={() => setActiveTab('overview')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'overview'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🏠 Overview
+            </button>
+            <button
               onClick={() => setActiveTab('tasks')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'tasks'
@@ -108,6 +118,16 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
               }`}
             >
               ✅ My Tasks
+            </button>
+            <button
+              onClick={() => setActiveTab('activity')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'activity'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              📝 Log Activity
             </button>
             {expensesEnabled && (
               <button
@@ -127,6 +147,86 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'overview' && (
+          <div>
+            <div className="mb-6 text-center">
+              <div className="text-4xl mb-3">👋</div>
+              <h2 className="text-2xl font-bold text-gray-900">Welcome Back, {employee.first_name}!</h2>
+              <p className="text-gray-600 mt-1">
+                Manage your tasks and activities. No time tracking required.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Assigned Tasks</p>
+                    <p className="text-2xl font-bold text-gray-900">{tasks.length}</p>
+                  </div>
+                  <div className="text-blue-500 text-2xl">✅</div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">This Week</p>
+                    <p className="text-2xl font-bold text-gray-900">Ready</p>
+                  </div>
+                  <div className="text-green-500 text-2xl">📅</div>
+                </div>
+              </div>
+              
+              {employee.can_expense && (
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Expenses</p>
+                      <p className="text-2xl font-bold text-gray-900">Enabled</p>
+                    </div>
+                    <div className="text-orange-500 text-2xl">💳</div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <button
+                  onClick={() => setActiveTab('tasks')}
+                  className="bg-white hover:bg-gray-50 p-4 rounded-lg border border-gray-200 text-left transition-colors"
+                >
+                  <div className="text-xl mb-2">✅</div>
+                  <h4 className="font-medium text-gray-900">View My Tasks</h4>
+                  <p className="text-sm text-gray-600">See assigned tasks and pick up new ones</p>
+                </button>
+                
+                <button
+                  onClick={() => setActiveTab('activity')}
+                  className="bg-white hover:bg-gray-50 p-4 rounded-lg border border-gray-200 text-left transition-colors"
+                >
+                  <div className="text-xl mb-2">📝</div>
+                  <h4 className="font-medium text-gray-900">Log Activity</h4>
+                  <p className="text-sm text-gray-600">Record work that's not task-based</p>
+                </button>
+                
+                {employee.can_expense && (
+                  <button
+                    onClick={() => setActiveTab('expenses')}
+                    className="bg-white hover:bg-gray-50 p-4 rounded-lg border border-gray-200 text-left transition-colors"
+                  >
+                    <div className="text-xl mb-2">💰</div>
+                    <h4 className="font-medium text-gray-900">Submit Expenses</h4>
+                    <p className="text-sm text-gray-600">Record business expenses</p>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        
         {activeTab === 'tasks' && (
           <div>
             <div className="mb-6 text-center">
@@ -140,11 +240,30 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
             <EmployeeTaskDashboard
               employee={employee}
               isNonClockWorker={true}
+              onClose={() => setActiveTab('overview')}
             />
           </div>
         )}
 
-        {activeTab === 'expenses' && expensesEnabled && (
+        {activeTab === 'activity' && (
+          <div>
+            <div className="mb-6 text-center">
+              <div className="text-4xl mb-3">📝</div>
+              <h2 className="text-2xl font-bold text-gray-900">Log Work Activity</h2>
+              <p className="text-gray-600 mt-1">
+                Record work that doesn't fit into specific tasks.
+              </p>
+            </div>
+            
+            <ActivityLogger
+              employee={employee}
+              organizationId={employee.organization_id}
+              onActivityAdded={loadData}
+            />
+          </div>
+        )}
+        
+        {activeTab === 'expenses' && employee.can_expense && (
           <div>
             <div className="mb-6 text-center">
               <div className="text-4xl mb-3">💰</div>
