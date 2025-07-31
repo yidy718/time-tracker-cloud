@@ -3,7 +3,7 @@ import { database, auth } from '../lib/supabase'
 import ReportsTab from './ReportsTab'
 import TaskManagement from './TaskManagement'
 
-export default function AdminDashboard({ session, employee }) {
+export default function AdminDashboard({ session, employee, organization }) {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [employees, setEmployees] = useState([])
   const [locations, setLocations] = useState([])
@@ -61,7 +61,7 @@ export default function AdminDashboard({ session, employee }) {
             <div className="flex-1 min-w-0 pr-4">
               <div className="flex items-center space-x-3 mb-3">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center shadow-lg">
-                  {employee.organization?.name?.toLowerCase().includes('v.a.s') || employee.organization?.name?.toLowerCase().includes('vas') ? (
+                  {organization?.name?.toLowerCase().includes('v.a.s') || organization?.name?.toLowerCase().includes('vas') || employee.organization?.name?.toLowerCase().includes('v.a.s') || employee.organization?.name?.toLowerCase().includes('vas') ? (
                     <img 
                       src="/vas-logo.jpg" 
                       alt="V.A.S Tri State" 
@@ -76,7 +76,7 @@ export default function AdminDashboard({ session, employee }) {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-2xl sm:text-4xl font-bold text-white mb-1 truncate">{employee.organization?.name}</h1>
+                  <h1 className="text-2xl sm:text-4xl font-bold text-white mb-1 truncate">{organization?.name || employee.organization?.name}</h1>
                   <p className="text-white/80 text-base sm:text-lg truncate">Admin Dashboard</p>
                 </div>
               </div>
@@ -177,7 +177,7 @@ export default function AdminDashboard({ session, employee }) {
           <ReportsTab 
             employees={employees}
             organizationId={employee.organization_id}
-            organization={{ id: employee.organization_id, name: employee.organization?.name || 'Organization' }}
+            organization={organization || { id: employee.organization_id, name: employee.organization?.name || 'Organization' }}
           />
         )}
 
