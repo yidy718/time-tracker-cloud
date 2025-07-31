@@ -9,6 +9,7 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [expensesEnabled, setExpensesEnabled] = useState(false)
+  const [hasMultipleCompanies, setHasMultipleCompanies] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
@@ -16,6 +17,15 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
       
       // Check if expenses are enabled for this employee
       setExpensesEnabled(employee.can_expense || false)
+      
+      // Check if employee belongs to multiple companies
+      try {
+        const companiesResult = await database.getEmployeeCompanies(employee.employee_id || employee.id)
+        setHasMultipleCompanies((companiesResult.data?.length || 0) > 1)
+      } catch (error) {
+        console.log('Could not check multiple companies, defaulting to single company')
+        setHasMultipleCompanies(false)
+      }
       
       // Load employee tasks
       const tasksResult = await database.getEmployeeTasks(employee.id, employee.organization_id)
@@ -26,7 +36,7 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
     } finally {
       setLoading(false)
     }
-  }, [employee.organization_id, employee.id, employee.can_expense])
+  }, [employee.organization_id, employee.id, employee.employee_id, employee.can_expense])
 
   useEffect(() => {
     loadData()
@@ -57,39 +67,48 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
       {/* Header */}
-      <div className="bg-white/10 backdrop-blur-xl border-b border-white/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-white">
+      <div className="bg-white/10 backdrop-blur-xl border-b border-white/20 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-14 sm:h-16">
+            <div className="flex items-center min-w-0 flex-1">
+              <h1 className="text-lg sm:text-xl font-semibold text-white truncate">
                 Task Dashboard
               </h1>
-              <div className="ml-4 px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm rounded-full font-medium">
+              <div className="hidden sm:block ml-3 px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs sm:text-sm rounded-full font-medium">
                 {organization?.name}
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-white/80">
-                Welcome, {employee.first_name} {employee.last_name}
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="hidden md:block text-xs sm:text-sm text-white/80 truncate max-w-32 sm:max-w-none">
+                Welcome, {employee.first_name}
               </div>
               
-              <div className="relative">
+              {hasMultipleCompanies && (
                 <button
                   onClick={switchCompany}
-                  className="px-3 py-2 text-sm bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors backdrop-blur-sm border border-white/20"
+                  className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors backdrop-blur-sm border border-white/20 flex items-center space-x-1"
                   title="Switch Company"
                 >
-                  🏢 Switch
+                  <span className="text-sm">🏢</span>
+                  <span className="hidden sm:inline">Switch</span>
                 </button>
-              </div>
+              )}
               
               <button
                 onClick={handleSignOut}
-                className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg flex items-center space-x-1"
               >
-                Sign Out
+                <span className="text-sm">🚪</span>
+                <span className="hidden sm:inline">Sign Out</span>
               </button>
+            </div>
+          </div>
+          
+          {/* Mobile Company Name */}
+          <div className="sm:hidden pb-2 -mt-1">
+            <div className="px-2 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs rounded-full font-medium inline-block">
+              {organization?.name}
             </div>
           </div>
         </div>
@@ -282,20 +301,6 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
         )}
       </div>
 
-      {/* Info Box for Non-Clock Workers */}
-      <div className="fixed bottom-4 right-4">
-        <div className="bg-blue-500/20 backdrop-blur-xl border border-blue-400/30 rounded-lg p-4 max-w-sm shadow-lg">
-          <div className="flex items-start">
-            <div className="text-blue-300 text-lg mr-2">ℹ️</div>
-            <div>
-              <h4 className="text-sm font-medium text-white">Task-Only Mode</h4>
-              <p className="text-xs text-white/80 mt-1">
-                You&apos;re in task-only mode. Focus on completing your assigned tasks without time tracking.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
