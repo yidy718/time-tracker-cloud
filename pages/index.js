@@ -19,13 +19,37 @@ export default function Home({ session }) {
 
   const fetchEmployee = useCallback(async () => {
     try {
-      const { data, error } = await database.getCurrentEmployee(session.user.id)
+      // First try to find employee by user ID
+      let { data, error } = await database.getCurrentEmployee(session.user.id)
+      
+      // If not found by ID, try by email (for admin users)
+      if (!data && !error && session.user.email) {
+        const emailResult = await database.getCurrentEmployeeByEmail(session.user.email)
+        data = emailResult.data
+        error = emailResult.error
+        
+        // If still no employee record but this is a known admin email, create virtual user
+        if (!data && !error) {
+          if (session.user.email === 'yidy.brier@gmail.com') {
+            data = {
+              id: 'e15d225d-7ff1-4663-8b1d-3e0878bddb2f',
+              email: session.user.email,
+              first_name: 'Yidy',
+              last_name: 'Brier',
+              role: 'manager',
+              is_active: true,
+              organization_id: '59590af0-3c38-403e-b4c9-ef4ba8db2a0b',
+              organization: { name: 'VasHours' }
+            }
+          }
+        }
+      }
       
       if (error) {
         console.error('Error fetching employee:', error)
-        setEmployee(null) // User needs setup
+        setEmployee(null)
       } else {
-        setEmployee(data) // Employee found
+        setEmployee(data)
       }
     } catch (error) {
       console.error('Error:', error)
