@@ -96,9 +96,6 @@ export default function TimeTracker({ session, employee, organization }) {
       setCurrentSession(sessionData)
 
       // Check if expenses are enabled for this employee
-      console.log('Employee data for expense check:', employee)
-      console.log('Employee can_expense:', employee.can_expense)
-      console.log('Employee can_expense type:', typeof employee.can_expense)
       setExpensesEnabled(employee.can_expense || false)
 
       // Load projects (locations come from projects now)
@@ -1179,18 +1176,6 @@ function ClockOutModal({ memo, onMemoChange, taskProgress, onTaskProgressChange,
     category: 'Work Related'
   })
 
-  // Debug logging for expense permissions (only once)
-  useEffect(() => {
-    console.log('ClockOutModal mounted - Employee prop:', employee)
-    console.log('ClockOutModal mounted - Employee can_expense:', employee?.can_expense)
-    console.log('ClockOutModal mounted - Employee email:', employee?.email)
-    console.log('ClockOutModal mounted - Should show expense section:', employee?.can_expense)
-    
-    // TEMPORARY: Force show expenses for Yidy Breuer for testing
-    if (employee?.email === 'yidybreuer+ch@gmail.com') {
-      console.log('🔧 TEMPORARY: Forcing expense section for Yidy Breuer')
-    }
-  }, [employee?.can_expense, employee?.email])
 
   const handleExpenseSubmit = async () => {
     if (!expenseData.amount || !expenseData.description) {
@@ -1314,7 +1299,7 @@ function ClockOutModal({ memo, onMemoChange, taskProgress, onTaskProgressChange,
           </div>
 
           {/* Expense Entry Section */}
-          {(employee?.can_expense || employee?.email === 'yidybreuer+ch@gmail.com') && (
+          {employee?.can_expense && (
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-semibold text-gray-800 flex items-center space-x-2">
