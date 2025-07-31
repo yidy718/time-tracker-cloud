@@ -50,35 +50,40 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
 
   const handleUpdateTaskProgress = async (taskId, updates) => {
     try {
+      console.log('🔄 Attempting to update task:', { taskId, updates, employeeId: employee.id })
       const result = await database.updateTask(taskId, updates)
       if (result.error) {
-        console.error('Error updating task:', result.error)
-        alert('Error updating task progress')
+        console.error('❌ Task update failed:', result.error)
+        alert(`Error updating task: ${result.error.message || 'Permission denied'}`)
         return
       }
       
+      console.log('✅ Task updated successfully:', result.data)
       await loadTasks()
       setShowProgressModal(false)
       setProgressTask(null)
+      alert('Task progress updated successfully!')
     } catch (error) {
-      console.error('Error updating task:', error)
-      alert('Error updating task progress')
+      console.error('❌ Task update exception:', error)
+      alert(`Error updating task: ${error.message || 'Unknown error'}`)
     }
   }
 
   const handleQuickStatusChange = async (taskId, newStatus) => {
     try {
+      console.log('🔄 Updating task status:', { taskId, newStatus, employeeId: employee.id })
       const result = await database.updateTask(taskId, { status: newStatus })
       if (result.error) {
-        console.error('Error updating task status:', result.error)
-        alert('Error updating task status')
+        console.error('❌ Status update failed:', result.error)
+        alert(`Error updating task status: ${result.error.message || 'Permission denied'}`)
         return
       }
       
+      console.log('✅ Task status updated successfully')
       await loadTasks()
     } catch (error) {
-      console.error('Error updating task status:', error)
-      alert('Error updating task status')
+      console.error('❌ Status update exception:', error)
+      alert(`Error updating task status: ${error.message || 'Unknown error'}`)
     }
   }
 
