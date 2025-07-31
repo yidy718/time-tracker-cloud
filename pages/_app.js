@@ -7,6 +7,19 @@ function MyApp({ Component, pageProps }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Force cache refresh for critical bug fixes
+    const buildVersion = '20250731-002'
+    const currentVersion = localStorage.getItem('build_version')
+    if (currentVersion !== buildVersion) {
+      localStorage.setItem('build_version', buildVersion)
+      // Force reload once to clear any cached components
+      if (currentVersion !== null && currentVersion !== buildVersion) {
+        console.log('🔄 Forcing refresh for critical bug fixes...')
+        window.location.reload(true)
+        return
+      }
+    }
+
     // Get initial session
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
