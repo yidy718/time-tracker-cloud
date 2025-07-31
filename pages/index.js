@@ -38,7 +38,7 @@ export default function Home({ session }) {
               email: session.user.email,
               first_name: 'Yidy',
               last_name: 'Brier',
-              role: 'manager',
+              role: 'admin', // Company admin, not manager
               is_active: true,
               organization_id: '59590af0-3c38-403e-b4c9-ef4ba8db2a0b',
               organization: { name: 'VasHours' }
@@ -263,14 +263,16 @@ export default function Home({ session }) {
   const safeOrganization = organization || employee.organization || { name: 'Default Organization' }
 
   if (employee.role === 'admin') {
-    // Check if this is the super admin (specific user ID only for safety)
-    if (employee.id === '882247fb-71f2-4d1d-8cfd-f33d8c5a3b0f') {
+    // Check if this is the PLATFORM super admin (yidy@pm.me - manages all companies)
+    if (employee.id === '882247fb-71f2-4d1d-8cfd-f33d8c5a3b0f' || employee.email === 'yidy@pm.me') {
       return <SuperAdminDashboard session={currentSession} employee={employee} />
     }
+    // Otherwise this is a COMPANY admin (manages their specific company only)
     return <AdminDashboard session={currentSession} employee={employee} organization={safeOrganization} />
   }
   
-  if (employee.role === 'manager') {
+  if (employee.role === 'manager' || employee.role === 'secretary') {
+    // Both manager and secretary get the same limited dashboard (reports + basic project view)
     return <ManagerDashboard session={currentSession} employee={employee} organization={safeOrganization} />
   }
 
