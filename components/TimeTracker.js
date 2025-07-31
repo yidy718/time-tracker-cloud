@@ -226,6 +226,34 @@ export default function TimeTracker({ session, employee, organization }) {
     setShowClockOutModal(true)
   }
 
+  const handleAddExpenseFromClockOut = async (expenseData) => {
+    try {
+      const expense = {
+        employee_id: employee.id,
+        organization_id: employee.organization_id,
+        amount: parseFloat(expenseData.amount),
+        description: expenseData.description,
+        location: expenseData.location || '',
+        category: expenseData.category || 'Work Related',
+        date: new Date().toISOString().split('T')[0],
+        status: 'pending',
+        created_at: new Date().toISOString()
+      }
+
+      const result = await database.addExpense(expense)
+      if (result.error) {
+        throw result.error
+      }
+
+      console.log('Expense added successfully:', result.data)
+      alert('Expense added successfully!')
+      
+    } catch (error) {
+      console.error('Error adding expense:', error)
+      throw error // Re-throw to be handled by the modal
+    }
+  }
+
   const confirmClockOut = async () => {
     if (!currentSession) return
 
@@ -704,6 +732,8 @@ export default function TimeTracker({ session, employee, organization }) {
             setTaskNotes('')
           }}
           loading={loading}
+          employee={employee}
+          onAddExpense={handleAddExpenseFromClockOut}
         />
       )}
 
@@ -1137,7 +1167,36 @@ function TaskSelectionModal({ employeeTasks, availableTasks, selectedTask, onTas
   )
 }
 
-function ClockOutModal({ memo, onMemoChange, taskProgress, onTaskProgressChange, taskNotes, onTaskNotesChange, currentTask, onConfirm, onCancel, loading }) {
+function ClockOutModal({ memo, onMemoChange, taskProgress, onTaskProgressChange, taskNotes, onTaskNotesChange, currentTask, onConfirm, onCancel, loading, employee, onAddExpense }) {
+  const [showExpenseEntry, setShowExpenseEntry] = useState(false)
+  const [expenseData, setExpenseData] = useState({
+    amount: '',
+    location: '',
+    description: '',
+    category: 'Work Related'
+  })
+
+  const handleExpenseSubmit = async () => {
+    if (!expenseData.amount || !expenseData.description) {
+      alert('Please fill in amount and description')
+      return
+    }
+    
+    try {
+      await onAddExpense(expenseData)
+      setShowExpenseEntry(false)
+      // Reset form
+      setExpenseData({
+        amount: '',
+        location: '',
+        description: '',
+        category: 'Work Related'
+      })
+    } catch (error) {
+      console.error('Error adding expense:', error)
+      alert('Error adding expense. Please try again.')
+    }
+  }
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20">
@@ -1238,6 +1297,27 @@ function ClockOutModal({ memo, onMemoChange, taskProgress, onTaskProgressChange,
             💡 <strong>Tip:</strong> Adding work notes helps your manager understand your daily contributions and can be useful for performance reviews.
           </div>
 
+          {/* Expense Entry Section */}
+          {employee?.can_expense && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-gray-800 flex items-center space-x-2">
+                  <span>💰</span>
+                  <span>Business Expenses</span>
+                </h4>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">
+                Need to log any business expenses from today? You can add them before clocking out.
+              </p>
+              <button
+                onClick={() => setShowExpenseEntry(true)}
+                className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors font-medium"
+              >
+                ➕ Add Expense
+              </button>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={onConfirm}
@@ -1263,6 +1343,106 @@ function ClockOutModal({ memo, onMemoChange, taskProgress, onTaskProgressChange,
           </div>
         </div>
       </div>
+
+      {/* Expense Entry Modal */}
+      {showExpenseEntry && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-white/20">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
+                  💰
+                </div>
+                <h3 className="text-xl font-bold text-gray-800">Add Business Expense</h3>
+              </div>
+              <button
+                onClick={() => setShowExpenseEntry(false)}
+                className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Amount ($) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={expenseData.amount}
+                  onChange={(e) => setExpenseData({...expenseData, amount: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="0.00"
+                  inputMode="decimal"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  value={expenseData.location}
+                  onChange={(e) => setExpenseData({...expenseData, location: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Where was this expense?"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category
+                </label>
+                <select
+                  value={expenseData.category}
+                  onChange={(e) => setExpenseData({...expenseData, category: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="Work Related">Work Related</option>
+                  <option value="Travel">Travel</option>
+                  <option value="Meals">Meals</option>
+                  <option value="Materials">Materials</option>
+                  <option value="Equipment">Equipment</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description *
+                </label>
+                <textarea
+                  value={expenseData.description}
+                  onChange={(e) => setExpenseData({...expenseData, description: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                  rows="3"
+                  placeholder="What was this expense for?"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => setShowExpenseEntry(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleExpenseSubmit}
+                  disabled={!expenseData.amount || !expenseData.description}
+                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 rounded-lg font-medium hover:from-green-600 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add Expense
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
