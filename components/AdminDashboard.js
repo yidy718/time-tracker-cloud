@@ -1804,7 +1804,7 @@ function TimeManagementTab({ employees, locations, organizationId, onDataChange 
 
   useEffect(() => {
     loadTimeSessions()
-  }, [startDate, endDate, organizationId])
+  }, [startDate, endDate, organizationId, loadTimeSessions])
 
   useEffect(() => {
     const loadProjects = async () => {
@@ -2447,7 +2447,7 @@ function ProjectLocationModal({ project, organizationId, onSuccess, onCancel }) 
   useEffect(() => {
     loadLocations()
     loadProjectLocations()
-  }, [])
+  }, [loadLocations, loadProjectLocations])
 
   const loadLocations = async () => {
     try {

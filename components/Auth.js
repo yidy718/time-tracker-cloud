@@ -24,17 +24,17 @@ export default function Auth() {
         
         console.log('Authentication result:', { authResult, authError })
 
-        if (authError || !authResult || authResult.length === 0) {
+        if (authError || !authResult) {
           throw new Error('Invalid username or password')
         }
 
-        const employee = authResult[0]
+        const employee = authResult
         
         // Create enhanced session for employee with organization data
         localStorage.setItem('employee_session', JSON.stringify({
-          user: { id: employee.employee_id, email: employee.email },
+          user: { id: employee.id, email: employee.email },
           employee: {
-            id: employee.employee_id,
+            id: employee.id,
             organization_id: employee.organization_id,
             first_name: employee.first_name,
             last_name: employee.last_name,

@@ -158,7 +158,7 @@ export default function TimeTracker({ session, employee, organization }) {
     } catch (error) {
       console.error('Error loading data:', error)
     }
-  }, [employee.id, employee.organization_id, loadTotalHours, loadTasks])
+  }, [employee, organization, session, loadTotalHours, loadTasks])
 
   useEffect(() => {
     // Update current time every second

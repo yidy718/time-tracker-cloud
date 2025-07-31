@@ -39,7 +39,7 @@ export default function ReportsTab({ employees, organizationId, organization, is
     // Load locations and projects
     loadLocations()
     loadProjects()
-  }, [organizationId])
+  }, [organizationId, loadLocations, loadProjects])
 
   const loadLocations = async () => {
     try {
