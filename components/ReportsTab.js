@@ -36,30 +36,30 @@ export default function ReportsTab({ employees, organizationId, organization, is
     setStartDate(startOfWeek.toISOString().split('T')[0])
     setEndDate(endOfWeek.toISOString().split('T')[0])
 
-    // Load locations and projects
+    // Load locations and projects - move functions inside useEffect
+    const loadLocations = async () => {
+      try {
+        const { data, error } = await database.getLocations(organizationId)
+        if (error) throw error
+        setLocations(data || [])
+      } catch (error) {
+        console.error('Error loading locations:', error)
+      }
+    }
+
+    const loadProjects = async () => {
+      try {
+        const { data, error } = await database.getClientProjects(organizationId)
+        if (error) throw error
+        setProjects(data || [])
+      } catch (error) {
+        console.error('Error loading projects:', error)
+      }
+    }
+
     loadLocations()
     loadProjects()
-  }, [organizationId, loadLocations, loadProjects])
-
-  const loadLocations = async () => {
-    try {
-      const { data, error } = await database.getLocations(organizationId)
-      if (error) throw error
-      setLocations(data || [])
-    } catch (error) {
-      console.error('Error loading locations:', error)
-    }
-  }
-
-  const loadProjects = async () => {
-    try {
-      const { data, error } = await database.getClientProjects(organizationId)
-      if (error) throw error
-      setProjects(data || [])
-    } catch (error) {
-      console.error('Error loading projects:', error)
-    }
-  }
+  }, [organizationId])
 
   const generateReport = async () => {
     setLoading(true)

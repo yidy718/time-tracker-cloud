@@ -1828,7 +1828,7 @@ function TimeManagementTab({ employees, locations, organizationId, onDataChange 
     setEndDate(endOfWeek.toISOString().split('T')[0])
   }, [])
 
-  const loadTimeSessions = async () => {
+  const loadTimeSessions = useCallback(async () => {
     if (!startDate || !endDate) return
     
     setLoading(true)
@@ -1841,11 +1841,11 @@ function TimeManagementTab({ employees, locations, organizationId, onDataChange 
       alert('Error loading time sessions. Please try again.')
     }
     setLoading(false)
-  }
+  }, [startDate, endDate, organizationId])
 
   useEffect(() => {
     loadTimeSessions()
-  }, [startDate, endDate, organizationId, loadTimeSessions])
+  }, [loadTimeSessions])
 
   useEffect(() => {
     const loadProjects = async () => {
@@ -2486,29 +2486,29 @@ function ProjectLocationModal({ project, organizationId, onSuccess, onCancel }) 
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    const loadLocations = async () => {
+      try {
+        const { data, error } = await database.getLocations(organizationId)
+        if (error) throw error
+        setLocations(data || [])
+      } catch (error) {
+        console.error('Error loading locations:', error)
+      }
+    }
+
+    const loadProjectLocations = async () => {
+      try {
+        const { data, error } = await database.getProjectLocations(project.id)
+        if (error) throw error
+        setProjectLocations(data || [])
+      } catch (error) {
+        console.error('Error loading project locations:', error)
+      }
+    }
+
     loadLocations()
     loadProjectLocations()
-  }, [loadLocations, loadProjectLocations])
-
-  const loadLocations = async () => {
-    try {
-      const { data, error } = await database.getLocations(organizationId)
-      if (error) throw error
-      setLocations(data || [])
-    } catch (error) {
-      console.error('Error loading locations:', error)
-    }
-  }
-
-  const loadProjectLocations = async () => {
-    try {
-      const { data, error } = await database.getProjectLocations(project.id)
-      if (error) throw error
-      setProjectLocations(data || [])
-    } catch (error) {
-      console.error('Error loading project locations:', error)
-    }
-  }
+  }, [organizationId, project?.id])
 
   const handleAddLocation = async (locationId) => {
     setLoading(true)
