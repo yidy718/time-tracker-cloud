@@ -28,6 +28,8 @@ export default function Home({ session }) {
         data = emailResult.data
         error = emailResult.error
         
+        console.log('Email lookup result:', { data, error, email: session.user.email })
+        
         // If still no employee record but this is a known admin email, create virtual user
         if (!data && !error) {
           if (session.user.email === 'yidy.brier@gmail.com') {
@@ -42,6 +44,15 @@ export default function Home({ session }) {
               organization: { name: 'VasHours' }
             }
           }
+        }
+      }
+      
+      // Ensure organization object exists to prevent undefined errors
+      if (data && !data.organization && data.organization_id) {
+        // Load organization details if missing
+        const { data: orgData } = await database.getOrganization(data.organization_id)
+        if (orgData) {
+          data.organization = orgData
         }
       }
       
@@ -233,24 +244,41 @@ export default function Home({ session }) {
     )
   }
 
-  // Route based on user role
+  // Route based on user role with safety checks
+  if (!employee || !employee.role) {
+    console.error('Employee or role is missing:', employee)
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600">Error: Invalid employee data</p>
+          <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded">
+            Reload
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Ensure organization exists or create default
+  const safeOrganization = organization || employee.organization || { name: 'Default Organization' }
+
   if (employee.role === 'admin') {
     // Check if this is the super admin (specific user ID only for safety)
     if (employee.id === '882247fb-71f2-4d1d-8cfd-f33d8c5a3b0f') {
       return <SuperAdminDashboard session={currentSession} employee={employee} />
     }
-    return <AdminDashboard session={currentSession} employee={employee} organization={organization} />
+    return <AdminDashboard session={currentSession} employee={employee} organization={safeOrganization} />
   }
   
   if (employee.role === 'manager') {
-    return <ManagerDashboard session={currentSession} employee={employee} organization={organization} />
+    return <ManagerDashboard session={currentSession} employee={employee} organization={safeOrganization} />
   }
 
   if (employee.role === 'non_clock_worker') {
-    return <NonClockWorkerDashboard session={currentSession} employee={employee} organization={organization} />
+    return <NonClockWorkerDashboard session={currentSession} employee={employee} organization={safeOrganization} />
   }
 
   // Default to TimeTracker for regular employees
-  return <TimeTracker session={currentSession} employee={employee} organization={organization} />
+  return <TimeTracker session={currentSession} employee={employee} organization={safeOrganization} />
 }
 
