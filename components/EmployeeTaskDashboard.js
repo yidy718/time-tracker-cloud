@@ -103,10 +103,10 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-6xl w-full max-h-[90vh] shadow-2xl border border-white/20 overflow-hidden">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-8 max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] shadow-2xl border border-white/20 overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-4 sm:mb-8 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-green-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
               📋
@@ -118,14 +118,16 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+            className="w-12 h-12 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors text-2xl font-bold touch-manipulation"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
+            type="button"
           >
             ×
           </button>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6 flex-shrink-0">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <div className="text-2xl font-bold text-blue-700">{stats.total}</div>
             <div className="text-sm text-blue-600">Total Tasks</div>
@@ -145,7 +147,7 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
+        <div className="flex space-x-1 mb-4 sm:mb-6 bg-gray-100 p-1 rounded-lg flex-shrink-0">
           <button
             onClick={() => setFilter('all')}
             className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
@@ -179,15 +181,20 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
         </div>
 
         {/* Tasks List */}
-        <div className="overflow-y-auto max-h-96">
+        <div className="flex-1 overflow-y-auto min-h-0 -webkit-overflow-scrolling-touch">
           {filteredTasks.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 pb-4">
               {filteredTasks.map(task => {
                 const isAssigned = employeeTasks.find(t => t.id === task.id)
                 const isAvailable = !isAssigned && availableTasks.find(t => t.id === task.id)
                 
                 return (
-                  <div key={task.id} className="bg-white p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                  <div 
+                    key={task.id} 
+                    className="bg-white p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer touch-manipulation"
+                    onClick={() => setSelectedTask(task)}
+                    style={{ WebkitTapHighlightColor: 'rgba(20, 184, 166, 0.1)' }}
+                  >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
                         <h4 className="font-semibold text-gray-900 mb-1">{task.title}</h4>
@@ -254,17 +261,18 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
 
                     {/* Actions */}
                     <div className="flex justify-between items-center">
-                      <button
-                        onClick={() => setSelectedTask(task)}
-                        className="text-teal-600 hover:text-teal-700 text-sm font-medium"
-                      >
-                        View Details
-                      </button>
+                      <div className="text-teal-600 text-sm font-medium">
+                        Tap to view details
+                      </div>
                       
                       {isAvailable && (
                         <button
-                          onClick={() => handlePickUpTask(task.id)}
-                          className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handlePickUpTask(task.id)
+                          }}
+                          className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors touch-manipulation"
+                          style={{ WebkitTapHighlightColor: 'transparent' }}
                         >
                           Pick Up Task
                         </button>

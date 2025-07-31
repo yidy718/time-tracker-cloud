@@ -134,6 +134,7 @@ export default function ManagerDashboard({ session, employee, organization }) {
               </p>
             </div>
             <TaskManagement
+              employee={employee}
               organizationId={employee.organization_id}
               currentUser={employee}
               isManagerView={true}

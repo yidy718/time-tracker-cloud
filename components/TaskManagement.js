@@ -286,6 +286,18 @@ export default function TaskManagement({ employee }) {
                 </div>
               )}
 
+              {/* Financial Info */}
+              {(task.po_number || task.invoice_number) && (
+                <div className="text-xs text-white/60 space-y-1">
+                  {task.po_number && (
+                    <div>🧾 PO: {task.po_number}</div>
+                  )}
+                  {task.invoice_number && (
+                    <div>📄 Invoice: {task.invoice_number}</div>
+                  )}
+                </div>
+              )}
+
               {/* Time Info */}
               <div className="text-xs text-white/50 space-y-1">
                 {task.estimated_hours && (
@@ -376,7 +388,9 @@ function TaskCreateModal({ employees, projects, onSubmit, onClose }) {
     estimated_hours: '',
     project_id: '',
     assigned_to: '',
-    is_available_to_all: false
+    is_available_to_all: false,
+    po_number: '',
+    invoice_number: ''
   })
 
   const handleSubmit = (e) => {
@@ -387,7 +401,9 @@ function TaskCreateModal({ employees, projects, onSubmit, onClose }) {
       due_date: formData.due_date || null,
       estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : null,
       project_id: formData.project_id || null,
-      assigned_to: formData.assigned_to || null
+      assigned_to: formData.assigned_to || null,
+      po_number: formData.po_number || null,
+      invoice_number: formData.invoice_number || null
     }
 
     onSubmit(taskData)
@@ -491,6 +507,29 @@ function TaskCreateModal({ employees, projects, onSubmit, onClose }) {
               </select>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">PO Number (Optional)</label>
+                <input
+                  type="text"
+                  value={formData.po_number}
+                  onChange={(e) => setFormData({...formData, po_number: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="PO-2024-001"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Number (Optional)</label>
+                <input
+                  type="text"
+                  value={formData.invoice_number}
+                  onChange={(e) => setFormData({...formData, invoice_number: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="INV-2024-001"
+                />
+              </div>
+            </div>
+
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -538,7 +577,9 @@ function TaskEditModal({ task, employees, projects, onSubmit, onClose }) {
     project_id: task.project_id || '',
     assigned_to: task.assigned_to || '',
     is_available_to_all: task.is_available_to_all || false,
-    progress_percentage: task.progress_percentage || 0
+    progress_percentage: task.progress_percentage || 0,
+    po_number: task.po_number || '',
+    invoice_number: task.invoice_number || ''
   })
 
   const handleSubmit = (e) => {
