@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { database } from '../lib/supabase'
 import EmployeeTaskDashboard from './EmployeeTaskDashboard'
 import ExpenseEntry from './ExpenseEntry'
@@ -9,11 +9,7 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
   const [loading, setLoading] = useState(true)
   const [expensesEnabled, setExpensesEnabled] = useState(false)
 
-  useEffect(() => {
-    loadData()
-  }, [employee.organization_id])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -30,7 +26,11 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
     } finally {
       setLoading(false)
     }
-  }
+  }, [employee.organization_id, employee.id])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   const handleSignOut = async () => {
     localStorage.removeItem('employee_session')
@@ -171,7 +171,7 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
             <div>
               <h4 className="text-sm font-medium text-blue-900">Task-Only Mode</h4>
               <p className="text-xs text-blue-700 mt-1">
-                You're in task-only mode. Focus on completing your assigned tasks without time tracking.
+                You&apos;re in task-only mode. Focus on completing your assigned tasks without time tracking.
               </p>
             </div>
           </div>

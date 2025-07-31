@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { database } from '../lib/supabase'
 
 export default function ExpenseEntry({ employee, organizationId, timeSessionId = null, onExpenseAdded, onClose = null }) {
@@ -13,16 +13,16 @@ export default function ExpenseEntry({ employee, organizationId, timeSessionId =
     if (showRecentExpenses) {
       loadRecentExpenses()
     }
-  }, [employee.id])
+  }, [employee.id, showRecentExpenses, loadRecentExpenses])
 
-  const loadRecentExpenses = async () => {
+  const loadRecentExpenses = useCallback(async () => {
     try {
       const { data } = await database.getEmployeeExpenses(employee.id, organizationId, 30) // last 30 days
       setRecentExpenses(data || [])
     } catch (error) {
       console.error('Error loading recent expenses:', error)
     }
-  }
+  }, [employee.id, organizationId])
 
   const handleSubmit = async (e) => {
     e.preventDefault()

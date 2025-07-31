@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { database } from '../lib/supabase'
 import TaskManagement from './TaskManagement'
 import ReportsTab from './ReportsTab'
@@ -9,11 +9,7 @@ export default function ManagerDashboard({ session, employee, organization }) {
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadData()
-  }, [employee.organization_id])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -30,7 +26,11 @@ export default function ManagerDashboard({ session, employee, organization }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [employee.organization_id])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   const handleSignOut = async () => {
     localStorage.removeItem('employee_session')
