@@ -75,7 +75,7 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
     successToast.innerHTML = `
       <div class="flex items-center space-x-2">
         <span class="text-lg">🎉</span>
-        <span class="font-medium">Task "${completedTask?.title}" completed!</span>
+        <span class="font-medium">Task "${completedTask?.title || 'Unknown'}" completed!</span>
       </div>
     `
     document.body.appendChild(successToast)
@@ -361,7 +361,7 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
               </div>
               <h3 className="text-2xl font-bold text-gray-800 mb-2">Task Completed!</h3>
               <p className="text-gray-600 mb-6">
-                Great job completing <strong>"{completedTask.title}"</strong>!
+                Great job completing <strong>&ldquo;{completedTask.title}&rdquo;</strong>!
               </p>
               
               {expensesEnabled && (

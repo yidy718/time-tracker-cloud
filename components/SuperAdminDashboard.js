@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import CompanySetupWizard from './CompanySetupWizard'
+import { sendCredentialsNotification } from '../lib/notifications'
 
 export default function SuperAdminDashboard({ session, employee }) {
   const [companies, setCompanies] = useState([])
@@ -783,7 +784,8 @@ function AddManagerModal({ companyId, companyName, onClose, onComplete }) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    email: ''
+    email: '',
+    phone: ''
   })
   const [loading, setLoading] = useState(false)
 
@@ -822,7 +824,39 @@ function AddManagerModal({ companyId, companyName, onClose, onComplete }) {
 
       if (employeeError) throw employeeError
 
-      alert(`✅ Company Admin created successfully!\n\nAdmin Login:\nEmail: ${formData.email}\nPassword: ${tempPassword}\n\nIMPORTANT: Save this password! Tell them to change it after first login.`)
+      // Prepare credentials for notification
+      const credentials = {
+        email: formData.email,
+        password: tempPassword,
+        companyName: selectedCompany.name
+      }
+
+      // Send notification (try email first, then SMS if phone provided)
+      let notificationSent = false
+      try {
+        const contact = { 
+          email: formData.email,
+          phone: formData.phone // if phone field exists
+        }
+        
+        const methods = ['email']
+        if (formData.phone) methods.push('sms')
+        
+        const results = await sendCredentialsNotification(contact, credentials, 'admin', methods)
+        const successfulResults = results.filter(r => r.success)
+        
+        if (successfulResults.length > 0) {
+          notificationSent = true
+          const sentMethods = successfulResults.map(r => r.method).join(', ')
+          alert(`✅ Company Admin created successfully!\n\n📧 Login credentials sent via: ${sentMethods}\n\nAdmin Login:\nEmail: ${formData.email}\nPassword: ${tempPassword}\n\n${notificationSent ? '✅ Credentials sent to admin automatically!' : '⚠️ Please share these credentials manually.'}`)
+        } else {
+          alert(`✅ Company Admin created successfully!\n\n⚠️ Could not send automated notification. Please share credentials manually.\n\nAdmin Login:\nEmail: ${formData.email}\nPassword: ${tempPassword}\n\nIMPORTANT: Save this password! Tell them to change it after first login.`)
+        }
+      } catch (notificationError) {
+        console.error('Notification error:', notificationError)
+        alert(`✅ Company Admin created successfully!\n\n⚠️ Could not send automated notification.\n\nAdmin Login:\nEmail: ${formData.email}\nPassword: ${tempPassword}\n\nIMPORTANT: Save this password! Tell them to change it after first login.`)
+      }
+
       onComplete()
     } catch (error) {
       console.error('Error adding company admin:', error)
@@ -883,6 +917,18 @@ function AddManagerModal({ companyId, companyName, onClose, onComplete }) {
               onChange={(e) => setFormData({...formData, email: e.target.value})}
               placeholder="john@company.com"
             />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-2">Phone Number (Optional)</label>
+            <input
+              type="tel"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={formData.phone}
+              onChange={(e) => setFormData({...formData, phone: e.target.value})}
+              placeholder="+1234567890"
+            />
+            <p className="text-sm text-gray-500 mt-1">📱 SMS credentials if provided</p>
           </div>
 
           <div className="flex space-x-4 pt-4">
