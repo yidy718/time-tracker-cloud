@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { database } from '../lib/supabase'
+import { database, auth } from '../lib/supabase'
 import EmployeeTaskDashboard from './EmployeeTaskDashboard'
 import ExpenseEntry from './ExpenseEntry'
 import ActivityLogger from './ActivityLogger'
@@ -13,6 +13,8 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
   const [showTaskCompleteModal, setShowTaskCompleteModal] = useState(false)
   const [completedTask, setCompletedTask] = useState(null)
   const [showExpenseEntry, setShowExpenseEntry] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [showPasswordChange, setShowPasswordChange] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
@@ -133,24 +135,60 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
                 Welcome, {employee.first_name}
               </div>
               
-              {hasMultipleCompanies && (
+              <div className="flex justify-end">
                 <button
-                  onClick={switchCompany}
-                  className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors backdrop-blur-sm border border-white/20 flex items-center space-x-1"
-                  title="Switch Company"
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="group relative w-10 h-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/20 hover:scale-105"
                 >
-                  <span className="text-sm">🏢</span>
-                  <span className="hidden sm:inline">Switch</span>
+                  <span className="text-lg transition-transform group-hover:rotate-90 duration-300">⚙️</span>
                 </button>
-              )}
+              </div>
               
-              <button
-                onClick={handleSignOut}
-                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg flex items-center space-x-1"
-              >
-                <span className="text-sm">🚪</span>
-                <span className="hidden sm:inline">Sign Out</span>
-              </button>
+              {showMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-[9999]" 
+                    onClick={() => setShowMenu(false)}
+                  />
+                  <div className="fixed top-20 right-4 left-4 sm:left-auto sm:right-4 w-auto sm:w-64 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-[10000] transform transition-all duration-300 scale-100 opacity-100">
+                    <div className="p-4">
+                      <button
+                        onClick={() => {
+                          setShowPasswordChange(true)
+                          setShowMenu(false)
+                        }}
+                        className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <span className="text-lg">🔑</span>
+                        <span className="font-medium text-gray-700">Change Password</span>
+                      </button>
+                      {hasMultipleCompanies && (
+                        <button
+                          onClick={() => {
+                            switchCompany()
+                            setShowMenu(false)
+                          }}
+                          className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                        >
+                          <span className="text-lg">🏢</span>
+                          <span className="font-medium text-gray-700">Switch Company</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={async () => {
+                          if (confirm('Are you sure you want to sign out?')) {
+                            await handleSignOut()
+                          }
+                        }}
+                        className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-50 transition-colors text-left mt-2"
+                      >
+                        <span className="text-lg">🚪</span>
+                        <span className="font-medium text-red-600">Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           
@@ -432,6 +470,154 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
         </div>
       )}
 
+      {/* Password Change Modal */}
+      {showPasswordChange && (
+        <PasswordChangeModal 
+          onClose={() => setShowPasswordChange(false)}
+        />
+      )}
+
+    </div>
+  )
+}
+
+function PasswordChangeModal({ onClose }) {
+  const [formData, setFormData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      setError('New passwords do not match')
+      setLoading(false)
+      return
+    }
+
+    if (formData.newPassword.length < 6) {
+      setError('New password must be at least 6 characters')
+      setLoading(false)
+      return
+    }
+
+    try {
+      const response = await auth.updatePassword({
+        currentPassword: formData.currentPassword,
+        newPassword: formData.newPassword
+      })
+
+      if (response.error) {
+        throw new Error(response.error.message)
+      }
+
+      setSuccess(true)
+      setTimeout(() => {
+        onClose()
+      }, 2000)
+    } catch (error) {
+      setError(error.message || 'Failed to change password')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-2xl font-bold text-gray-800">Change Password</h3>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ×
+          </button>
+        </div>
+
+        {success ? (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-white text-2xl mx-auto mb-4">
+              ✓
+            </div>
+            <h4 className="text-xl font-semibold text-gray-800 mb-2">Password Changed!</h4>
+            <p className="text-gray-600">Your password has been updated successfully.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Current Password
+              </label>
+              <input
+                type="password"
+                value={formData.currentPassword}
+                onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                New Password
+              </label>
+              <input
+                type="password"
+                value={formData.newPassword}
+                onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+                minLength={6}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+                minLength={6}
+              />
+            </div>
+
+            <div className="flex space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              >
+                {loading ? 'Changing...' : 'Change Password'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   )
 }

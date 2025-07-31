@@ -831,12 +831,11 @@ function AddManagerModal({ companyId, companyName, onClose, onComplete }) {
         companyName: selectedCompany.name
       }
 
-      // Send notification (try email first, then SMS if phone provided)
-      let notificationSent = false
+      // Try to send notification - but don't fail if it doesn't work
       try {
         const contact = { 
           email: formData.email,
-          phone: formData.phone // if phone field exists
+          phone: formData.phone || null
         }
         
         const methods = ['email']
@@ -846,15 +845,16 @@ function AddManagerModal({ companyId, companyName, onClose, onComplete }) {
         const successfulResults = results.filter(r => r.success)
         
         if (successfulResults.length > 0) {
-          notificationSent = true
           const sentMethods = successfulResults.map(r => r.method).join(', ')
-          alert(`✅ Company Admin created successfully!\n\n📧 Login credentials sent via: ${sentMethods}\n\nAdmin Login:\nEmail: ${formData.email}\nPassword: ${tempPassword}\n\n${notificationSent ? '✅ Credentials sent to admin automatically!' : '⚠️ Please share these credentials manually.'}`)
+          alert(`✅ Company Admin created successfully!\n\n📧 Credentials sent via: ${sentMethods}\n\nAdmin Login:\nEmail: ${formData.email}\nPassword: ${tempPassword}\n\n✅ Login credentials delivered automatically!`)
         } else {
-          alert(`✅ Company Admin created successfully!\n\n⚠️ Could not send automated notification. Please share credentials manually.\n\nAdmin Login:\nEmail: ${formData.email}\nPassword: ${tempPassword}\n\nIMPORTANT: Save this password! Tell them to change it after first login.`)
+          // Notification failed but admin was created successfully
+          alert(`✅ Company Admin created successfully!\n\nAdmin Login:\nEmail: ${formData.email}\nPassword: ${tempPassword}\n\n⚠️ Please share these credentials manually.\nIMPORTANT: Tell them to change password after first login.`)
         }
       } catch (notificationError) {
-        console.error('Notification error:', notificationError)
-        alert(`✅ Company Admin created successfully!\n\n⚠️ Could not send automated notification.\n\nAdmin Login:\nEmail: ${formData.email}\nPassword: ${tempPassword}\n\nIMPORTANT: Save this password! Tell them to change it after first login.`)
+        // Notification failed but admin was created successfully
+        console.warn('Notification failed (this is OK):', notificationError)
+        alert(`✅ Company Admin created successfully!\n\nAdmin Login:\nEmail: ${formData.email}\nPassword: ${tempPassword}\n\n⚠️ Automated notification not available.\nIMPORTANT: Share these credentials manually and tell them to change password after first login.`)
       }
 
       onComplete()

@@ -408,6 +408,45 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
     }
   }
 
+  const sendPasswordResetEmail = async (employee) => {
+    if (!employee.email) {
+      alert(`❌ Cannot send password reset email.\n\n${employee.first_name} ${employee.last_name} does not have an email address on file.\n\nPlease either:\n1. Add an email address to their profile\n2. Use the manual "🔄 Reset" button instead`)
+      return
+    }
+
+    if (!confirm(`Send password reset email to ${employee.first_name} ${employee.last_name}?\n\nEmail: ${employee.email}\n\nThey will receive a secure link to set a new password.`)) {
+      return
+    }
+
+    try {
+      // Import supabase if not already imported
+      const { supabase } = await import('../lib/supabase')
+      
+      // Send password reset email using Supabase's built-in functionality
+      const { error } = await supabase.auth.resetPasswordForEmail(employee.email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      })
+      
+      if (error) throw error
+      
+      alert(`✅ Password reset email sent successfully!\n\n📧 Email sent to: ${employee.email}\n\n${employee.first_name} can check their email and click the secure link to set a new password.\n\n💡 The email may take a few minutes to arrive and might be in the spam folder.`)
+      
+    } catch (error) {
+      console.error('Error sending password reset email:', error)
+      
+      // Provide helpful error messages based on the error type
+      if (error.message.includes('rate limit') || error.message.includes('too many requests')) {
+        alert(`⚠️ Rate limit reached.\n\nPlease wait a few minutes before sending another password reset email.\n\n💡 Alternative: Use the "🔄 Reset" button to manually set a password.`)
+      } else if (error.message.includes('user not found') || error.message.includes('email not found')) {
+        alert(`❌ Email address not found in authentication system.\n\nThis employee might need to be re-created with proper email authentication.\n\n💡 For now, use the "🔄 Reset" button to manually set a password.`)
+      } else if (error.message.includes('email not confirmed')) {
+        alert(`⚠️ Employee's email address is not confirmed.\n\nThey need to confirm their email address first.\n\n💡 Alternative: Use the "🔄 Reset" button to manually set a password.`)
+      } else {
+        alert(`❌ Error sending password reset email:\n${error.message}\n\n💡 Alternative solutions:\n1. Try again in a few minutes\n2. Use the "🔄 Reset" button to manually set a password\n3. Ask the employee to use "Forgot Password" on the login page`)
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -492,6 +531,13 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
                           title="Reset Password"
                         >
                           🔄 Reset
+                        </button>
+                        <button
+                          onClick={() => sendPasswordResetEmail(emp)}
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
+                          title="Send Password Reset Email"
+                        >
+                          📧 Email Reset
                         </button>
                       </>
                     )}
@@ -825,6 +871,7 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
     firstName: '',
     lastName: '',
     email: '',
+    phone: '',
     role: 'employee',
     hourlyRate: '',
     canExpense: false
@@ -838,6 +885,13 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
     setError('')
 
     try {
+      // Validate that either email or phone is provided
+      if (!formData.email.trim() && !formData.phone.trim()) {
+        setError('Please provide either an email address or phone number')
+        setLoading(false)
+        return
+      }
+      
       // Generate unique username and simple password
       const username = `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase()}`
       const defaultPassword = 'emp123' // Simple default password
@@ -848,7 +902,8 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
         organization_id: organizationId,
         first_name: formData.firstName,
         last_name: formData.lastName,
-        email: formData.email,
+        email: formData.email.trim() || null,
+        phone: formData.phone.trim() || null,
         username: username,
         password: defaultPassword,
         role: formData.role,
@@ -872,7 +927,8 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
             organization_id: organizationId,
             first_name: formData.firstName,
             last_name: formData.lastName,
-            email: formData.email,
+            email: formData.email.trim() || null,
+            phone: formData.phone.trim() || null,
             username: uniqueUsername,
             password: defaultPassword,
             role: formData.role,
@@ -944,16 +1000,30 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
 
         <div>
           <label className="block text-white/80 font-medium mb-3">
-            Email *
+            Email <span className="text-white/60">(optional if phone provided)</span>
           </label>
           <input
             type="email"
-            required
             className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
             value={formData.email}
             onChange={(e) => setFormData({...formData, email: e.target.value})}
-            placeholder="john@company.com"
+            placeholder="john@company.com (optional)"
           />
+        </div>
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Phone Number <span className="text-white/60">(optional if email provided)</span>
+          </label>
+          <input
+            type="tel"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
+            value={formData.phone}
+            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+            placeholder="(555) 123-4567 (optional)"
+          />
+          <p className="text-white/50 text-xs mt-2">
+            💡 Employees can log in using their phone number instead of email for easier access
+          </p>
         </div>
 
         <div>
@@ -1035,6 +1105,7 @@ function EditEmployeeForm({ employee, organizationId, onSuccess, onCancel }) {
     firstName: employee.first_name || '',
     lastName: employee.last_name || '',
     email: employee.email || '',
+    phone: employee.phone || '',
     role: employee.role || 'employee',
     isActive: employee.is_active !== false,
     hourlyRate: employee.hourly_rate || '',
@@ -1047,12 +1118,20 @@ function EditEmployeeForm({ employee, organizationId, onSuccess, onCancel }) {
     e.preventDefault()
     setLoading(true)
     setError('')
+    
+    // Validate that either email or phone is provided
+    if (!formData.email.trim() && !formData.phone.trim()) {
+      setError('Please provide either an email address or phone number')
+      setLoading(false)
+      return
+    }
 
     try {
       const { error: updateError } = await database.updateEmployee(employee.id, {
         first_name: formData.firstName,
         last_name: formData.lastName,
-        email: formData.email,
+        email: formData.email.trim() || null,
+        phone: formData.phone.trim() || null,
         role: formData.role,
         is_active: formData.isActive,
         hourly_rate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
@@ -1111,16 +1190,30 @@ function EditEmployeeForm({ employee, organizationId, onSuccess, onCancel }) {
 
         <div>
           <label className="block text-white/80 font-medium mb-3">
-            Email *
+            Email <span className="text-white/60">(optional if phone provided)</span>
           </label>
           <input
             type="email"
-            required
             className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-300"
             value={formData.email}
             onChange={(e) => setFormData({...formData, email: e.target.value})}
-            placeholder="john@company.com"
+            placeholder="john@company.com (optional)"
           />
+        </div>
+        <div>
+          <label className="block text-white/80 font-medium mb-3">
+            Phone Number <span className="text-white/60">(optional if email provided)</span>
+          </label>
+          <input
+            type="tel"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all duration-300"
+            value={formData.phone}
+            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+            placeholder="(555) 123-4567 (optional)"
+          />
+          <p className="text-white/50 text-xs mt-2">
+            💡 Employees can log in using their phone number instead of email for easier access
+          </p>
         </div>
 
         <div>
