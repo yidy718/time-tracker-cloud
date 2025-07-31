@@ -807,7 +807,7 @@ function AddManagerModal({ companyId, companyName, onClose, onComplete }) {
 
       if (authError) throw authError
 
-      // Create employee record as manager
+      // Create employee record as admin (company owner)
       const { error: employeeError } = await supabase
         .from('employees')
         .insert({
@@ -816,17 +816,17 @@ function AddManagerModal({ companyId, companyName, onClose, onComplete }) {
           first_name: formData.firstName,
           last_name: formData.lastName,
           email: formData.email,
-          role: 'manager',
+          role: 'admin',
           is_active: true
         })
 
       if (employeeError) throw employeeError
 
-      alert(`✅ Manager added successfully!\n\nManager Login:\nEmail: ${formData.email}\nPassword: ${tempPassword}\n\nIMPORTANT: Save this password! Tell them to change it after first login.`)
+      alert(`✅ Company Admin created successfully!\n\nAdmin Login:\nEmail: ${formData.email}\nPassword: ${tempPassword}\n\nIMPORTANT: Save this password! Tell them to change it after first login.`)
       onComplete()
     } catch (error) {
-      console.error('Error adding manager:', error)
-      alert(`Error adding manager: ${error.message}`)
+      console.error('Error adding company admin:', error)
+      alert(`Error adding company admin: ${error.message}`)
     }
     setLoading(false)
   }

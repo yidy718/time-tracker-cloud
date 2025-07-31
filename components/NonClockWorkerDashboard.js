@@ -10,6 +10,9 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
   const [loading, setLoading] = useState(true)
   const [expensesEnabled, setExpensesEnabled] = useState(false)
   const [hasMultipleCompanies, setHasMultipleCompanies] = useState(false)
+  const [showTaskCompleteModal, setShowTaskCompleteModal] = useState(false)
+  const [completedTask, setCompletedTask] = useState(null)
+  const [showExpenseEntry, setShowExpenseEntry] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
@@ -46,6 +49,52 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
     localStorage.removeItem('employee_session')
     localStorage.removeItem('selected_company')
     window.location.href = '/'
+  }
+
+  const handleTaskComplete = (task) => {
+    setCompletedTask(task)
+    setShowTaskCompleteModal(true)
+  }
+
+  const handleTaskCompleteConfirm = () => {
+    setShowTaskCompleteModal(false)
+    
+    // If expenses are enabled, offer to add expense
+    if (expensesEnabled) {
+      setShowExpenseEntry(true)
+    } else {
+      // Show success animation
+      showTaskCompletionSuccess()
+    }
+  }
+
+  const showTaskCompletionSuccess = () => {
+    // Create a success toast/animation
+    const successToast = document.createElement('div')
+    successToast.className = 'fixed top-4 right-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300'
+    successToast.innerHTML = `
+      <div class="flex items-center space-x-2">
+        <span class="text-lg">🎉</span>
+        <span class="font-medium">Task "${completedTask?.title}" completed!</span>
+      </div>
+    `
+    document.body.appendChild(successToast)
+    
+    // Animate in
+    setTimeout(() => {
+      successToast.style.transform = 'translateX(0)'
+    }, 100)
+    
+    // Animate out and remove
+    setTimeout(() => {
+      successToast.style.transform = 'translateX(100%)'
+      setTimeout(() => document.body.removeChild(successToast), 300)
+    }, 3000)
+  }
+
+  const handleExpenseComplete = () => {
+    setShowExpenseEntry(false)
+    showTaskCompletionSuccess()
   }
 
   const switchCompany = () => {
@@ -260,6 +309,7 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
               employee={employee}
               isNonClockWorker={true}
               onClose={() => setActiveTab('overview')}
+              onTaskComplete={handleTaskComplete}
             />
           </div>
         )}
@@ -300,6 +350,87 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
           </div>
         )}
       </div>
+
+      {/* Task Completion Modal */}
+      {showTaskCompleteModal && completedTask && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20 transform transition-all duration-300 scale-100 opacity-100">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white text-2xl mx-auto mb-4 shadow-lg">
+                🎉
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Task Completed!</h3>
+              <p className="text-gray-600 mb-6">
+                Great job completing <strong>"{completedTask.title}"</strong>!
+              </p>
+              
+              {expensesEnabled && (
+                <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-xl border border-blue-200 mb-6">
+                  <p className="text-sm text-gray-700 mb-3">
+                    💡 Did this task involve any business expenses?
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    You can add expenses related to this task completion.
+                  </p>
+                </div>
+              )}
+              
+              <div className="flex space-x-3">
+                {expensesEnabled && (
+                  <button
+                    onClick={() => {
+                      setShowTaskCompleteModal(false)
+                      setShowExpenseEntry(true)
+                    }}
+                    className="flex-1 bg-gradient-to-r from-blue-500 to-green-600 text-white py-3 rounded-xl font-medium hover:from-blue-600 hover:to-green-700 transition-all duration-300 hover:scale-105 shadow-lg"
+                  >
+                    💰 Add Expense
+                  </button>
+                )}
+                <button
+                  onClick={handleTaskCompleteConfirm}
+                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transition-all duration-300 hover:scale-105 shadow-lg"
+                >
+                  ✅ Done
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expense Entry Modal */}
+      {showExpenseEntry && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-white/20 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg">
+                  💰
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800">Add Task Expense</h3>
+                  <p className="text-sm text-gray-600">Related to: {completedTask?.title}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowExpenseEntry(false)}
+                className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            <ExpenseEntry
+              employee={employee}
+              organizationId={employee.organization_id}
+              relatedTaskId={completedTask?.id}
+              onExpenseAdded={handleExpenseComplete}
+              isModal={true}
+            />
+          </div>
+        </div>
+      )}
 
     </div>
   )
