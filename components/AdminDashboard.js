@@ -470,6 +470,11 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
                         ${emp.hourly_rate}/hour
                       </p>
                     )}
+                    {emp.can_expense && (
+                      <p className="text-orange-400 text-xs mt-1">
+                        💳 Can submit expenses
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     {emp.username && (
@@ -821,7 +826,8 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
     lastName: '',
     email: '',
     role: 'employee',
-    hourlyRate: ''
+    hourlyRate: '',
+    canExpense: false
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -846,7 +852,8 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
         username: username,
         password: defaultPassword,
         role: formData.role,
-        hourly_rate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null
+        hourly_rate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
+        can_expense: formData.canExpense
       }
       
       console.log('Creating employee with data:', employeeData)
@@ -868,7 +875,9 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
             email: formData.email,
             username: uniqueUsername,
             password: defaultPassword,
-            role: formData.role
+            role: formData.role,
+            hourly_rate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
+            can_expense: formData.canExpense
           }
           
           const { data: retryCreatedEmployee, error: retryError } = await database.createEmployee(retryEmployeeData)
@@ -956,9 +965,10 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
             value={formData.role}
             onChange={(e) => setFormData({...formData, role: e.target.value})}
           >
-            <option value="employee">Employee</option>
+            <option value="employee">Employee (Time Clock)</option>
             <option value="manager">Manager</option>
             <option value="admin">Admin</option>
+            <option value="non_clock_worker">Non-Clock Worker (Tasks/Expenses Only)</option>
           </select>
         </div>
 
@@ -979,6 +989,19 @@ function AddEmployeeForm({ organizationId, onSuccess, onCancel }) {
             />
           </div>
           <p className="text-white/50 text-xs mt-2">Enter the employee&apos;s hourly wage for payroll calculations</p>
+        </div>
+
+        <div>
+          <label className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={formData.canExpense}
+              onChange={(e) => setFormData({...formData, canExpense: e.target.checked})}
+              className="w-5 h-5 text-green-500 bg-white/10 border-white/20 rounded focus:ring-green-500 focus:ring-2"
+            />
+            <span className="text-white/80 font-medium">Can Submit Expenses</span>
+          </label>
+          <p className="text-white/50 text-xs mt-1 ml-8">Allow this employee to submit expense reports</p>
         </div>
 
         <div className="flex space-x-4">
@@ -1014,7 +1037,8 @@ function EditEmployeeForm({ employee, organizationId, onSuccess, onCancel }) {
     email: employee.email || '',
     role: employee.role || 'employee',
     isActive: employee.is_active !== false,
-    hourlyRate: employee.hourly_rate || ''
+    hourlyRate: employee.hourly_rate || '',
+    canExpense: employee.can_expense || false
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -1031,7 +1055,8 @@ function EditEmployeeForm({ employee, organizationId, onSuccess, onCancel }) {
         email: formData.email,
         role: formData.role,
         is_active: formData.isActive,
-        hourly_rate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null
+        hourly_rate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
+        can_expense: formData.canExpense
       })
 
       if (updateError) throw updateError
@@ -1107,22 +1132,38 @@ function EditEmployeeForm({ employee, organizationId, onSuccess, onCancel }) {
             value={formData.role}
             onChange={(e) => setFormData({...formData, role: e.target.value})}
           >
-            <option value="employee">Employee</option>
+            <option value="employee">Employee (Time Clock)</option>
             <option value="manager">Manager</option>
             <option value="admin">Admin</option>
+            <option value="non_clock_worker">Non-Clock Worker (Tasks/Expenses Only)</option>
           </select>
         </div>
 
-        <div>
-          <label className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              checked={formData.isActive}
-              onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
-              className="w-5 h-5 text-yellow-500 bg-white/10 border-white/20 rounded focus:ring-yellow-500 focus:ring-2"
-            />
-            <span className="text-white/80 font-medium">Active Employee</span>
-          </label>
+        <div className="space-y-4">
+          <div>
+            <label className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={formData.isActive}
+                onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                className="w-5 h-5 text-yellow-500 bg-white/10 border-white/20 rounded focus:ring-yellow-500 focus:ring-2"
+              />
+              <span className="text-white/80 font-medium">Active Employee</span>
+            </label>
+          </div>
+          
+          <div>
+            <label className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={formData.canExpense}
+                onChange={(e) => setFormData({...formData, canExpense: e.target.checked})}
+                className="w-5 h-5 text-green-500 bg-white/10 border-white/20 rounded focus:ring-green-500 focus:ring-2"
+              />
+              <span className="text-white/80 font-medium">Can Submit Expenses</span>
+            </label>
+            <p className="text-white/50 text-xs mt-1 ml-8">Allow this employee to submit expense reports</p>
+          </div>
         </div>
 
         <div>
