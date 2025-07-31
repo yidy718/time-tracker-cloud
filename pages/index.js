@@ -4,11 +4,18 @@ import Auth from '../components/Auth'
 import TimeTracker from '../components/TimeTracker'
 import AdminDashboard from '../components/AdminDashboard'
 import SuperAdminDashboard from '../components/SuperAdminDashboard'
+import ManagerDashboard from '../components/ManagerDashboard'
+import NonClockWorkerDashboard from '../components/NonClockWorkerDashboard'
+import CompanySelectionModal from '../components/CompanySelectionModal'
 
 export default function Home({ session }) {
   const [employee, setEmployee] = useState(null)
   const [loading, setLoading] = useState(true)
   const [currentSession, setCurrentSession] = useState(null)
+  const [organizations, setOrganizations] = useState([])
+  const [showCompanySelection, setShowCompanySelection] = useState(false)
+  const [selectedCompany, setSelectedCompany] = useState(null)
+  const [organization, setOrganization] = useState(null)
 
   const fetchEmployee = useCallback(async () => {
     try {
@@ -40,18 +47,88 @@ export default function Home({ session }) {
     if (employeeSessionData) {
       try {
         const employeeSession = JSON.parse(employeeSessionData)
+        
+        // Check if this is enhanced authentication data with organizations
+        if (employeeSession.employee && employeeSession.employee.organizations) {
+          const orgs = employeeSession.employee.organizations
+          setOrganizations(orgs)
+          
+          // Check for existing company selection
+          const selectedCompanyData = localStorage.getItem('selected_company')
+          if (selectedCompanyData) {
+            const companySession = JSON.parse(selectedCompanyData)
+            setSelectedCompany(companySession)
+            setEmployee(companySession.employee)
+            
+            // Load organization details
+            const { data: orgData } = await database.getOrganization(companySession.organization_id)
+            setOrganization(orgData)
+            
+            setCurrentSession(employeeSession)
+            setLoading(false)
+            return
+          }
+          
+          // If multiple companies, show selection modal
+          if (orgs.length > 1) {
+            setShowCompanySelection(true)
+            setCurrentSession(employeeSession)
+            setLoading(false)
+            return
+          }
+          
+          // If single company, auto-select
+          if (orgs.length === 1) {
+            const autoSelected = {
+              organization_id: orgs[0].organization_id,
+              organization_name: orgs[0].organization_name,
+              role: orgs[0].role,
+              employee: {
+                ...employeeSession.employee,
+                organization_id: orgs[0].organization_id,
+                role: orgs[0].role
+              }
+            }
+            
+            localStorage.setItem('selected_company', JSON.stringify(autoSelected))
+            setSelectedCompany(autoSelected)
+            setEmployee(autoSelected.employee)
+            
+            // Load organization details
+            const { data: orgData } = await database.getOrganization(orgs[0].organization_id)
+            setOrganization(orgData)
+          }
+        } else {
+          // Legacy employee session format - backwards compatibility
+          setEmployee(employeeSession.employee)
+          if (employeeSession.employee?.organization_id) {
+            const { data: orgData } = await database.getOrganization(employeeSession.employee.organization_id)
+            setOrganization(orgData)
+          }
+        }
+        
         setCurrentSession(employeeSession)
-        setEmployee(employeeSession.employee)
         setLoading(false)
         return
       } catch (error) {
         console.error('Invalid employee session:', error)
         localStorage.removeItem('employee_session')
+        localStorage.removeItem('selected_company')
       }
     }
     
     setLoading(false)
   }, [session, fetchEmployee])
+
+  const handleCompanySelection = async (companySession) => {
+    setSelectedCompany(companySession)
+    setEmployee(companySession.employee)
+    setShowCompanySelection(false)
+    
+    // Load organization details
+    const { data: orgData } = await database.getOrganization(companySession.organization_id)
+    setOrganization(orgData)
+  }
 
   useEffect(() => {
     checkSession()
@@ -70,6 +147,19 @@ export default function Home({ session }) {
 
   if (!currentSession) {
     return <Auth />
+  }
+
+  // Show company selection modal if needed
+  if (showCompanySelection && organizations.length > 1) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <CompanySelectionModal
+          organizations={organizations}
+          onSelect={handleCompanySelection}
+          employee={currentSession.employee}
+        />
+      </div>
+    )
   }
 
   if (!employee) {
@@ -119,18 +209,24 @@ export default function Home({ session }) {
     )
   }
 
+  // Route based on user role
   if (employee.role === 'admin') {
     // Check if this is the super admin (specific user ID only for safety)
     if (employee.id === '882247fb-71f2-4d1d-8cfd-f33d8c5a3b0f') {
       return <SuperAdminDashboard session={currentSession} employee={employee} />
     }
-    return <AdminDashboard session={currentSession} employee={employee} />
+    return <AdminDashboard session={currentSession} employee={employee} organization={organization} />
   }
   
   if (employee.role === 'manager') {
-    return <AdminDashboard session={currentSession} employee={employee} />
+    return <ManagerDashboard session={currentSession} employee={employee} organization={organization} />
   }
 
-  return <TimeTracker session={currentSession} employee={employee} />
+  if (employee.role === 'non_clock_worker') {
+    return <NonClockWorkerDashboard session={currentSession} employee={employee} organization={organization} />
+  }
+
+  // Default to TimeTracker for regular employees
+  return <TimeTracker session={currentSession} employee={employee} organization={organization} />
 }
 

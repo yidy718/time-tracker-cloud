@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { database, auth } from '../lib/supabase'
 import EmployeeTaskDashboard from './EmployeeTaskDashboard'
+import ExpenseModal from './ExpenseModal'
 
-export default function TimeTracker({ session, employee }) {
+export default function TimeTracker({ session, employee, organization }) {
   const [currentSession, setCurrentSession] = useState(null)
   const [projects, setProjects] = useState([])
   const [selectedProject, setSelectedProject] = useState('')
@@ -26,6 +27,8 @@ export default function TimeTracker({ session, employee }) {
   const [taskProgress, setTaskProgress] = useState(0)
   const [taskNotes, setTaskNotes] = useState('')
   const [showTaskDashboard, setShowTaskDashboard] = useState(false)
+  const [showExpenseModal, setShowExpenseModal] = useState(false)
+  const [expensesEnabled, setExpensesEnabled] = useState(false)
 
   const loadTotalHours = useCallback(async () => {
     try {
@@ -91,6 +94,11 @@ export default function TimeTracker({ session, employee }) {
       // Load current session
       const { data: sessionData } = await database.getCurrentSession(employee.id)
       setCurrentSession(sessionData)
+
+      // Check if expenses are enabled for this organization
+      if (organization) {
+        setExpensesEnabled(organization.enable_expenses || false)
+      }
 
       // Load projects (locations come from projects now)
       console.log('Loading projects for organization:', employee.organization_id)
@@ -257,7 +265,12 @@ export default function TimeTracker({ session, employee }) {
       setClockOutMemo('')
       setTaskProgress(0)
       setTaskNotes('')
-      // Clock out completed - no need for popup
+      
+      // Show expense modal if expenses are enabled
+      if (expensesEnabled) {
+        setShowExpenseModal(true)
+      }
+      
       await loadTotalHours()
       await loadTasks() // Refresh tasks to show updated progress
     } catch (error) {
@@ -693,6 +706,20 @@ export default function TimeTracker({ session, employee }) {
             setTaskNotes('')
           }}
           loading={loading}
+        />
+      )}
+
+      {/* Expense Modal */}
+      {showExpenseModal && (
+        <ExpenseModal
+          employee={employee}
+          organizationId={employee.organization_id}
+          timeSessionId={null}
+          onClose={() => setShowExpenseModal(false)}
+          onExpenseAdded={() => {
+            console.log('Expense added successfully')
+            setShowExpenseModal(false)
+          }}
         />
       )}
     </div>

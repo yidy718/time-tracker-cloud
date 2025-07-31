@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { database } from '../lib/supabase'
 
-export default function ReportsTab({ employees, organizationId, organization }) {
+export default function ReportsTab({ employees, organizationId, organization, isManagerView = false }) {
   const [selectedEmployee, setSelectedEmployee] = useState('all')
   const [selectedLocation, setSelectedLocation] = useState('all')
   const [selectedProject, setSelectedProject] = useState('all')
@@ -64,7 +64,7 @@ export default function ReportsTab({ employees, organizationId, organization }) 
   const generateReport = async () => {
     setLoading(true)
     try {
-      let reportData = { timeData: [], taskSummary: [], completedTasks: [] }
+      let reportData = { timeData: [], taskSummary: [], completedTasks: [], expenses: [] }
 
       // Get time report data if needed
       if (reportType === 'time' || reportType === 'combined') {
@@ -109,6 +109,27 @@ export default function ReportsTab({ employees, organizationId, organization }) 
           console.warn('Task analytics not available:', taskError)
         }
       }
+
+      // Get expense data if organization has expenses enabled
+      if (organization?.enable_expenses) {
+        try {
+          const expensesResult = await database.getOrganizationExpenses(
+            organizationId,
+            startDate,
+            endDate
+          )
+          let expenseData = expensesResult.data || []
+          
+          // Filter by employee if selected
+          if (selectedEmployee !== 'all') {
+            expenseData = expenseData.filter(expense => expense.employee_id === selectedEmployee)
+          }
+          
+          reportData.expenses = expenseData
+        } catch (expenseError) {
+          console.warn('Expense data not available:', expenseError)
+        }
+      }
       
       setReportData(reportData)
     } catch (error) {
@@ -130,32 +151,67 @@ export default function ReportsTab({ employees, organizationId, organization }) 
   const generateCSV = () => {
     if (!reportData) return ''
 
-    const headers = ['Employee', 'Date', 'Hours Worked', 'Clock In', 'Clock Out', 'Location', 'Project', 'Duration (Minutes)', 'Hourly Rate', 'Total Pay', 'Notes']
-    const rows = reportData.timeData.map(entry => {
-      const durationHours = (entry.duration_minutes || 0) / 60
-      const hourlyRate = entry.hourly_rate || 0
-      const totalPay = durationHours * hourlyRate
+    let csvSections = []
+
+    // Time tracking data
+    if (reportData.timeData && reportData.timeData.length > 0) {
+      const timeHeaders = ['Employee', 'Date', 'Hours Worked', 'Clock In', 'Clock Out', 'Location', 'Project', 'Duration (Minutes)', 'Hourly Rate', 'Total Pay', 'Notes']
+      const timeRows = reportData.timeData.map(entry => {
+        const durationHours = (entry.duration_minutes || 0) / 60
+        const hourlyRate = entry.hourly_rate || 0
+        const totalPay = durationHours * hourlyRate
+        
+        return [
+          `${entry.first_name} ${entry.last_name}`,
+          new Date(entry.clock_in).toLocaleDateString(),
+          formatDuration(entry.duration_minutes || 0),
+          new Date(entry.clock_in).toLocaleTimeString(),
+          entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString() : 'In Progress',
+          entry.location_name || 'N/A',
+          entry.project_name || 'No Project',
+          entry.duration_minutes || 0,
+          hourlyRate ? `$${hourlyRate.toFixed(2)}` : 'N/A',
+          hourlyRate ? `$${totalPay.toFixed(2)}` : 'N/A',
+          entry.notes || 'No notes'
+        ]
+      })
       
-      return [
-        `${entry.first_name} ${entry.last_name}`,
-        new Date(entry.clock_in).toLocaleDateString(),
-        formatDuration(entry.duration_minutes || 0),
-        new Date(entry.clock_in).toLocaleTimeString(),
-        entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString() : 'In Progress',
-        entry.location_name || 'N/A',
-        entry.project_name || 'No Project',
-        entry.duration_minutes || 0,
-        hourlyRate ? `$${hourlyRate.toFixed(2)}` : 'N/A',
-        hourlyRate ? `$${totalPay.toFixed(2)}` : 'N/A',
-        entry.notes || 'No notes'
-      ]
-    })
+      const timeSection = ['TIME TRACKING DATA', '', ...([timeHeaders, ...timeRows]
+        .map(row => row.map(cell => `"${cell}"`).join(',')))]
+      csvSections.push(timeSection.join('\n'))
+    }
 
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
-      .join('\n')
+    // Expense data
+    if (reportData.expenses && reportData.expenses.length > 0) {
+      const expenseHeaders = ['Employee', 'Date', 'Amount', 'Description']
+      const expenseRows = reportData.expenses.map(expense => [
+        `${expense.employees.first_name} ${expense.employees.last_name}`,
+        new Date(expense.date).toLocaleDateString(),
+        `$${expense.amount.toFixed(2)}`,
+        expense.description
+      ])
+      
+      const expenseSection = ['', '', 'EXPENSE DATA', '', ...([expenseHeaders, ...expenseRows]
+        .map(row => row.map(cell => `"${cell}"`).join(',')))]
+      csvSections.push(expenseSection.join('\n'))
+    }
 
-    return csvContent
+    // Task completion data
+    if (reportData.completedTasks && reportData.completedTasks.length > 0) {
+      const taskHeaders = ['Task Title', 'Completed By', 'Completion Date', 'Status']
+      const taskRows = reportData.completedTasks.map(task => [
+        task.title,
+        `${task.completed_by_first_name} ${task.completed_by_last_name}`,
+        new Date(task.completed_at).toLocaleDateString(),
+        task.status
+      ])
+      
+      const taskSection = ['', '', 'COMPLETED TASKS', '', ...([taskHeaders, ...taskRows]
+        .map(row => row.map(cell => `"${cell}"`).join(',')))]
+      csvSections.push(taskSection.join('\n'))
+    }
+
+    return csvSections.join('\n')
   }
 
   const downloadCSV = () => {
@@ -860,6 +916,49 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
                       <div className="text-white/60">
                         {task.actual_hours ? `${task.actual_hours}h actual` : 'No time logged'}
                         {task.estimated_hours ? ` / ${task.estimated_hours}h estimated` : ''}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Expenses Section */}
+          {organization?.enable_expenses && reportData.expenses && reportData.expenses.length > 0 && (
+            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 mt-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
+                    💰
+                  </div>
+                  <h3 className="text-xl font-bold text-white">Expenses ({reportData.expenses.length})</h3>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-white/60">Total Amount</p>
+                  <p className="text-2xl font-bold text-green-400">
+                    ${reportData.expenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {reportData.expenses.map((expense, index) => (
+                  <div key={expense.id} className="bg-white/5 p-4 rounded-lg border border-white/10">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-semibold text-white mb-1">{expense.description}</p>
+                        <p className="text-sm text-white/70">
+                          {expense.employees.first_name} {expense.employees.last_name}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-green-400">
+                          ${parseFloat(expense.amount).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-white/60">
+                          {new Date(expense.date).toLocaleDateString()}
+                        </p>
                       </div>
                     </div>
                   </div>

@@ -20,18 +20,29 @@ export default function Auth() {
         // Employee login with username/password using secure authentication function
         console.log('Attempting employee login with username:', username)
         
-        const { data: employee, error: authError } = await database.authenticateEmployee(username, password)
+        const { data: authResult, error: authError } = await database.authenticateEmployee(username, password)
         
-        console.log('Authentication result:', { employee, authError })
+        console.log('Authentication result:', { authResult, authError })
 
-        if (authError || !employee) {
+        if (authError || !authResult || authResult.length === 0) {
           throw new Error('Invalid username or password')
         }
 
-        // Create a simple session for employee
+        const employee = authResult[0]
+        
+        // Create enhanced session for employee with organization data
         localStorage.setItem('employee_session', JSON.stringify({
-          user: { id: employee.id, email: employee.email },
-          employee: employee
+          user: { id: employee.employee_id, email: employee.email },
+          employee: {
+            id: employee.employee_id,
+            organization_id: employee.organization_id,
+            first_name: employee.first_name,
+            last_name: employee.last_name,
+            email: employee.email,
+            role: employee.role,
+            is_active: employee.is_active,
+            organizations: employee.organizations
+          }
         }))
         
         // Trigger page refresh to load employee interface
