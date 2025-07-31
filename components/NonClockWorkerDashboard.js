@@ -26,7 +26,7 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
     } finally {
       setLoading(false)
     }
-  }, [employee.organization_id, employee.id])
+  }, [employee.organization_id, employee.id, employee.can_expense])
 
   useEffect(() => {
     loadData()
@@ -209,7 +209,7 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
                 >
                   <div className="text-xl mb-2">📝</div>
                   <h4 className="font-medium text-gray-900">Log Activity</h4>
-                  <p className="text-sm text-gray-600">Record work that's not task-based</p>
+                  <p className="text-sm text-gray-600">Record work that&apos;s not task-based</p>
                 </button>
                 
                 {employee.can_expense && (
@@ -251,7 +251,7 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
               <div className="text-4xl mb-3">📝</div>
               <h2 className="text-2xl font-bold text-gray-900">Log Work Activity</h2>
               <p className="text-gray-600 mt-1">
-                Record work that doesn't fit into specific tasks.
+                Record work that doesn&apos;t fit into specific tasks.
               </p>
             </div>
             
