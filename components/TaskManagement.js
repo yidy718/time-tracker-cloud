@@ -32,7 +32,7 @@ export default function TaskManagement({ employee }) {
     } finally {
       setLoading(false)
     }
-  }, [employee.organization_id, filters])
+  }, [employee.organization_id, filters.status, filters.assignedTo, filters.projectId, filters.priority])
 
   useEffect(() => {
     loadData()

@@ -177,7 +177,7 @@ export default function AdminDashboard({ session, employee }) {
           <ReportsTab 
             employees={employees}
             organizationId={employee.organization_id}
-            organization={employee.organization}
+            organization={{ id: employee.organization_id, name: employee.organization?.name || 'Organization' }}
           />
         )}
 

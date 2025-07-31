@@ -7,6 +7,8 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all') // all, assigned, available
   const [selectedTask, setSelectedTask] = useState(null)
+  const [showProgressModal, setShowProgressModal] = useState(false)
+  const [progressTask, setProgressTask] = useState(null)
 
   const loadTasks = useCallback(async () => {
     try {
@@ -43,6 +45,40 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
     } catch (error) {
       console.error('Error picking up task:', error)
       alert('Error picking up task')
+    }
+  }
+
+  const handleUpdateTaskProgress = async (taskId, updates) => {
+    try {
+      const result = await database.updateTask(taskId, updates)
+      if (result.error) {
+        console.error('Error updating task:', result.error)
+        alert('Error updating task progress')
+        return
+      }
+      
+      await loadTasks()
+      setShowProgressModal(false)
+      setProgressTask(null)
+    } catch (error) {
+      console.error('Error updating task:', error)
+      alert('Error updating task progress')
+    }
+  }
+
+  const handleQuickStatusChange = async (taskId, newStatus) => {
+    try {
+      const result = await database.updateTask(taskId, { status: newStatus })
+      if (result.error) {
+        console.error('Error updating task status:', result.error)
+        alert('Error updating task status')
+        return
+      }
+      
+      await loadTasks()
+    } catch (error) {
+      console.error('Error updating task status:', error)
+      alert('Error updating task status')
     }
   }
 
@@ -262,21 +298,63 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
                     {/* Actions */}
                     <div className="flex justify-between items-center">
                       <div className="text-teal-600 text-sm font-medium">
-                        Tap to view details
+                        {isAssigned ? 'Tap to update progress' : 'Tap to view details'}
                       </div>
                       
-                      {isAvailable && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handlePickUpTask(task.id)
-                          }}
-                          className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors touch-manipulation"
-                          style={{ WebkitTapHighlightColor: 'transparent' }}
-                        >
-                          Pick Up Task
-                        </button>
-                      )}
+                      <div className="flex space-x-2">
+                        {isAssigned && task.status !== 'completed' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setProgressTask(task)
+                              setShowProgressModal(true)
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors touch-manipulation"
+                            style={{ WebkitTapHighlightColor: 'transparent' }}
+                          >
+                            Update Progress
+                          </button>
+                        )}
+                        
+                        {isAssigned && task.status === 'not_started' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleQuickStatusChange(task.id, 'in_progress')
+                            }}
+                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors touch-manipulation"
+                            style={{ WebkitTapHighlightColor: 'transparent' }}
+                          >
+                            Start Task
+                          </button>
+                        )}
+                        
+                        {isAssigned && task.status === 'in_progress' && task.progress_percentage >= 100 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleQuickStatusChange(task.id, 'completed')
+                            }}
+                            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors touch-manipulation"
+                            style={{ WebkitTapHighlightColor: 'transparent' }}
+                          >
+                            Complete Task
+                          </button>
+                        )}
+                        
+                        {isAvailable && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handlePickUpTask(task.id)
+                            }}
+                            className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors touch-manipulation"
+                            style={{ WebkitTapHighlightColor: 'transparent' }}
+                          >
+                            Pick Up Task
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )
@@ -304,6 +382,18 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
         <TaskDetailModal
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
+        />
+      )}
+
+      {/* Progress Update Modal */}
+      {showProgressModal && progressTask && (
+        <TaskProgressModal
+          task={progressTask}
+          onUpdate={handleUpdateTaskProgress}
+          onClose={() => {
+            setShowProgressModal(false)
+            setProgressTask(null)
+          }}
         />
       )}
     </div>
@@ -435,6 +525,143 @@ function TaskDetailModal({ task, onClose }) {
             )}
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// Task Progress Update Modal Component
+function TaskProgressModal({ task, onUpdate, onClose }) {
+  const [formData, setFormData] = useState({
+    status: task.status || 'not_started',
+    progress_percentage: task.progress_percentage || 0,
+    progress_notes: ''
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    
+    const updates = {
+      status: formData.status,
+      progress_percentage: parseInt(formData.progress_percentage),
+      progress_notes: formData.progress_notes.trim() || null
+    }
+
+    onUpdate(task.id, updates)
+  }
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return 'bg-green-100 text-green-800 border-green-200'
+      case 'in_progress': return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'not_started': return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'on_hold': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      default: return 'bg-gray-100 text-gray-800 border-gray-200'
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[70]">
+      <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl">
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Update Task Progress</h3>
+            <p className="text-gray-600 text-sm mt-1">{task.title}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Status Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Task Status
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {['not_started', 'in_progress', 'on_hold', 'completed'].map(status => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setFormData({...formData, status})}
+                  className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                    formData.status === status 
+                      ? getStatusColor(status)
+                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  {status.replace('_', ' ').toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Progress Percentage */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Progress Percentage: {formData.progress_percentage}%
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="5"
+              value={formData.progress_percentage}
+              onChange={(e) => setFormData({...formData, progress_percentage: e.target.value})}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+            />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0%</span>
+              <span>25%</span>
+              <span>50%</span>
+              <span>75%</span>
+              <span>100%</span>
+            </div>
+            <div className="mt-2">
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all"
+                  style={{ width: `${formData.progress_percentage}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Progress Notes (Optional)
+            </label>
+            <textarea
+              rows={3}
+              value={formData.progress_notes}
+              onChange={(e) => setFormData({...formData, progress_notes: e.target.value})}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              placeholder="What progress have you made? Any blockers or updates to share..."
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-medium shadow-lg"
+            >
+              Update Progress
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
