@@ -8,7 +8,7 @@ function MyApp({ Component, pageProps }) {
 
   useEffect(() => {
     // Force cache refresh for critical bug fixes
-    const buildVersion = '20250731-002'
+    const buildVersion = '20250731-003'
     const currentVersion = localStorage.getItem('build_version')
     if (currentVersion !== buildVersion) {
       localStorage.setItem('build_version', buildVersion)
