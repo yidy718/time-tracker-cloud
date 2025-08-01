@@ -198,13 +198,22 @@ export default function ReportsTab({ employees, organizationId, organization, is
 
     // Task completion data
     if (reportData.completedTasks && reportData.completedTasks.length > 0) {
-      const taskHeaders = ['Task Title', 'Completed By', 'Completion Date', 'Status']
-      const taskRows = reportData.completedTasks.map(task => [
-        task.title,
-        `${task.completed_by_first_name} ${task.completed_by_last_name}`,
-        new Date(task.completed_at).toLocaleDateString(),
-        task.status
-      ])
+      const taskHeaders = ['Task Title', 'Completed By', 'Completion Date', 'Status', 'Hours', 'Hourly Rate', 'Labor Cost']
+      const taskRows = reportData.completedTasks.map(task => {
+        const actualHours = parseFloat(task.actual_hours) || 0
+        const hourlyRate = task.assigned_employee?.hourly_rate || 0
+        const laborCost = actualHours * hourlyRate
+        
+        return [
+          task.title,
+          `${task.assigned_first_name} ${task.assigned_last_name}`,
+          new Date(task.completed_at).toLocaleDateString(),
+          task.status,
+          actualHours ? `${actualHours}h` : 'No time logged',
+          hourlyRate ? `$${hourlyRate.toFixed(2)}` : 'No rate set',
+          laborCost ? `$${laborCost.toFixed(2)}` : '$0.00'
+        ]
+      })
       
       const taskSection = ['', '', 'COMPLETED TASKS', '', ...([taskHeaders, ...taskRows]
         .map(row => row.map(cell => `"${cell}"`).join(',')))]
@@ -411,9 +420,20 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
     if (hasTaskData) {
       pdf.text(`Completed Tasks: ${reportData.completedTasks.length}`, 20, yOffset)
       const totalTaskHours = reportData.completedTasks.reduce((sum, task) => sum + (parseFloat(task.actual_hours) || 0), 0)
+      const totalTaskCost = reportData.completedTasks.reduce((sum, task) => {
+        const hours = parseFloat(task.actual_hours) || 0
+        const rate = task.assigned_employee?.hourly_rate || 0
+        return sum + (hours * rate)
+      }, 0)
+      
       if (totalTaskHours > 0) {
         pdf.text(`Task Hours: ${totalTaskHours.toFixed(1)}h`, 20, yOffset + 7)
-        yOffset += 14
+        if (totalTaskCost > 0) {
+          pdf.text(`Task Labor Cost: $${totalTaskCost.toFixed(2)}`, 20, yOffset + 14)
+          yOffset += 21
+        } else {
+          yOffset += 14
+        }
       } else {
         yOffset += 7
       }
@@ -560,11 +580,22 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
         pdf.text(`Priority: ${task.priority}`, 120, currentY)
         currentY += 5
         
-        // Hours if available
+        // Hours and cost if available
         if (task.actual_hours || task.estimated_hours) {
-          const hoursText = task.actual_hours ? 
-            `${task.actual_hours}h actual${task.estimated_hours ? ` / ${task.estimated_hours}h est` : ''}` :
-            `${task.estimated_hours}h estimated`
+          const actualHours = parseFloat(task.actual_hours) || 0
+          const estimatedHours = parseFloat(task.estimated_hours) || 0
+          const hourlyRate = task.assigned_employee?.hourly_rate || 0
+          
+          let hoursText = actualHours ? 
+            `${actualHours}h actual${estimatedHours ? ` / ${estimatedHours}h est` : ''}` :
+            `${estimatedHours}h estimated`
+          
+          // Add cost calculation if we have actual hours and hourly rate
+          if (actualHours > 0 && hourlyRate > 0) {
+            const taskCost = actualHours * hourlyRate
+            hoursText += ` • Cost: $${taskCost.toFixed(2)} (@$${hourlyRate}/hr)`
+          }
+          
           pdf.text(`Time: ${hoursText}`, 25, currentY)
           currentY += 5
         }
@@ -899,6 +930,17 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
                       <p className="text-sm text-white/80 mb-2">{task.description}</p>
                     )}
                     
+                    {(task.po_number || task.invoice_number) && (
+                      <div className="text-xs text-white/60 mb-2 space-y-1">
+                        {task.po_number && (
+                          <div>🧾 PO: {task.po_number}</div>
+                        )}
+                        {task.invoice_number && (
+                          <div>📄 Invoice: {task.invoice_number}</div>
+                        )}
+                      </div>
+                    )}
+                    
                     <div className="flex justify-between items-center text-xs">
                       <div className="flex space-x-4">
                         <span className={`px-2 py-1 rounded-full ${
@@ -913,9 +955,38 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
                           Progress: {task.progress_percentage}%
                         </span>
                       </div>
-                      <div className="text-white/60">
-                        {task.actual_hours ? `${task.actual_hours}h actual` : 'No time logged'}
-                        {task.estimated_hours ? ` / ${task.estimated_hours}h estimated` : ''}
+                      <div className="flex items-center space-x-2 text-white/60">
+                        <span>
+                          {task.actual_hours ? `${task.actual_hours}h actual` : 'No time logged'}
+                          {task.estimated_hours ? ` / ${task.estimated_hours}h estimated` : ''}
+                          {task.actual_hours && task.assigned_employee?.hourly_rate && (
+                            <span className="text-green-400 ml-2">
+                              • $${(parseFloat(task.actual_hours) * task.assigned_employee.hourly_rate).toFixed(2)} cost
+                            </span>
+                          )}
+                        </span>
+                        <button
+                          onClick={async () => {
+                            // Load and show task comments for this task
+                            try {
+                              const { data } = await database.getTaskComments(task.id)
+                              if (data && data.length > 0) {
+                                const commentsList = data.map(c => 
+                                  `${c.employee?.first_name} ${c.employee?.last_name} (${new Date(c.created_at).toLocaleString()}): ${c.comment_text}`
+                                ).join('\n\n')
+                                alert(`Task Comments for "${task.title}":\n\n${commentsList}`)
+                              } else {
+                                alert(`No comments found for "${task.title}"`)
+                              }
+                            } catch (error) {
+                              console.error('Error loading task comments:', error)
+                              alert('Error loading task comments')
+                            }
+                          }}
+                          className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded hover:bg-blue-500/30 transition-colors"
+                        >
+                          💬 Comments
+                        </button>
                       </div>
                     </div>
                   </div>

@@ -566,6 +566,65 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
     }
   }
 
+  const sendMagicLink = async (employee, method = 'email') => {
+    const contact = method === 'email' ? employee.email : employee.phone
+    const contactType = method === 'email' ? 'email address' : 'phone number'
+    
+    if (!contact) {
+      alert(`❌ Cannot send magic link via ${method}.\n\n${employee.first_name} ${employee.last_name} does not have a ${contactType} on file.\n\nPlease either:\n1. Add a ${contactType} to their profile\n2. Use the manual "🔄 Reset" button instead`)
+      return
+    }
+
+    if (!confirm(`Send magic link to ${employee.first_name} ${employee.last_name}?\n\n${method === 'email' ? 'Email' : 'Phone'}: ${contact}\n\nThey will receive a secure one-time login link that works without a password.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/send-magic-link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: employee.email, // Magic links require email even if sending via SMS
+          linkType: 'magic_link',
+          redirectTo: `${window.location.origin}/`
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to generate magic link')
+      }
+
+      if (method === 'email') {
+        alert(`✅ Magic link sent successfully!\n\n📧 Email sent to: ${employee.email}\n\n${employee.first_name} can click the link in their email to log in directly without a password.\n\n💡 The email may take a few minutes to arrive and might be in the spam folder.`)
+      } else {
+        // For SMS, we'd need to integrate with a service like Twilio
+        // For now, show the magic link that admin can share manually
+        if (result.magicLink) {
+          const shortLink = result.magicLink.length > 100 ? result.magicLink.substring(0, 100) + '...' : result.magicLink
+          alert(`✅ Magic link generated!\n\n📱 Phone: ${employee.phone}\n\n🔗 Share this link manually:\n${shortLink}\n\n💡 This is a one-time login link that expires in 1 hour.`)
+        } else {
+          alert(`✅ Magic link generated for ${employee.first_name}!\n\nPlease check your email setup or use the email option instead.`)
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error sending magic link:', error)
+      
+      // Provide helpful error messages
+      if (error.message.includes('rate limit') || error.message.includes('too many requests')) {
+        alert(`⚠️ Rate limit reached.\n\nPlease wait a few minutes before sending another magic link.\n\n💡 Alternative: Use the "🔄 Reset" button to manually set a password.`)
+      } else if (error.message.includes('user not found') || error.message.includes('email not found')) {
+        alert(`❌ Email address not found in authentication system.\n\nThis employee might need to be re-created with proper email authentication.\n\n💡 For now, use the "🔄 Reset" button to manually set a password.`)
+      } else {
+        alert(`❌ Error generating magic link:\n${error.message}\n\n💡 Alternative solutions:\n1. Try again in a few minutes\n2. Use the "📧 Email Reset" button for password reset\n3. Use the "🔄 Reset" button to manually set a password`)
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -658,6 +717,22 @@ function EmployeesTab({ employees, onEmployeesChange, organizationId }) {
                         >
                           📧 Email Reset
                         </button>
+                        <button
+                          onClick={() => sendMagicLink(emp, 'email')}
+                          className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
+                          title="Send Magic Link via Email (One-time login)"
+                        >
+                          ✨ Magic Link
+                        </button>
+                        {emp.phone && (
+                          <button
+                            onClick={() => sendMagicLink(emp, 'sms')}
+                            className="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
+                            title="Generate Magic Link for SMS sharing"
+                          >
+                            📱 SMS Link
+                          </button>
+                        )}
                       </>
                     )}
                     <button

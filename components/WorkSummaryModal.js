@@ -5,6 +5,7 @@ export default function WorkSummaryModal({
   session, 
   taskData,
   totalExpenses = 0,
+  expensesEnabled = false,
   onClose 
 }) {
   const [sessionDuration, setSessionDuration] = useState('0h 0m')
@@ -100,12 +101,26 @@ export default function WorkSummaryModal({
           )}
         </div>
 
-        <button
-          onClick={onClose}
-          className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-4 rounded-xl font-medium hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 hover:scale-105 shadow-lg"
-        >
-          ✨ Great Work! Continue
-        </button>
+        <div className="space-y-3">
+          {expensesEnabled && (
+            <button
+              onClick={() => {
+                // Show expenses tab but go back to home afterwards
+                window.location.hash = '#expenses'
+                onClose()
+              }}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transition-all duration-300 hover:scale-105 shadow-lg"
+            >
+              💰 Add Expenses for This Session
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-4 rounded-xl font-medium hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 hover:scale-105 shadow-lg"
+          >
+            ✨ Great Work! Continue
+          </button>
+        </div>
       </div>
     </div>
   )

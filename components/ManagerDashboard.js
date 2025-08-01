@@ -78,7 +78,7 @@ export default function ManagerDashboard({ session, employee, organization }) {
                   Welcome, {employee.first_name} {employee.last_name}
                 </div>
                 
-                <div className="flex justify-end">
+                <div className="relative flex justify-end">
                   <button
                     onClick={() => setShowMenu(!showMenu)}
                     className="group relative w-10 h-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/20 hover:scale-105"
@@ -90,10 +90,10 @@ export default function ManagerDashboard({ session, employee, organization }) {
                 {showMenu && (
                   <>
                     <div 
-                      className="fixed inset-0 z-[9999]" 
+                      className="fixed inset-0 z-40" 
                       onClick={() => setShowMenu(false)}
                     />
-                    <div className="fixed top-20 right-4 left-4 sm:left-auto sm:right-4 w-auto sm:w-64 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-[10000] transform transition-all duration-300 scale-100 opacity-100">
+                    <div className="absolute top-12 right-0 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-50 transform transition-all duration-300 scale-100 opacity-100">
                       <div className="p-4">
                         <button
                           onClick={() => {
@@ -166,13 +166,69 @@ export default function ManagerDashboard({ session, employee, organization }) {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Dashboard Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg">
+                👥
+              </div>
+              <div className="ml-4">
+                <p className="text-white/60 text-sm">Team Members</p>
+                <p className="text-2xl font-bold text-white">{employees.length}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg">
+                🎯
+              </div>
+              <div className="ml-4">
+                <p className="text-white/60 text-sm">Active Projects</p>
+                <p className="text-2xl font-bold text-white">{projects.length}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg">
+                📊
+              </div>
+              <div className="ml-4">
+                <p className="text-white/60 text-sm">This Month</p>
+                <p className="text-2xl font-bold text-white">Overview</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg">
+                ⚡
+              </div>
+              <div className="ml-4">
+                <p className="text-white/60 text-sm">Status</p>
+                <p className="text-lg font-bold text-green-400">Active</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {activeTab === 'projects' && (
           <div>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white">Projects & Task Management</h2>
-              <p className="text-white/70 mt-1">
-                View and manage client projects and tasks for your organization.
-              </p>
+            <div className="flex items-center mb-8">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg mr-4">
+                📋
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-2">Projects & Task Management</h2>
+                <p className="text-white/70">
+                  Manage your team's projects, assign tasks, and track progress
+                </p>
+              </div>
             </div>
             <TaskManagement
               employee={employee}
@@ -185,11 +241,16 @@ export default function ManagerDashboard({ session, employee, organization }) {
 
         {activeTab === 'reports' && (
           <div>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white">Reports</h2>
-              <p className="text-white/70 mt-1">
-                View time tracking and task completion reports.
-              </p>
+            <div className="flex items-center mb-8">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg mr-4">
+                📊
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-2">Team Reports & Analytics</h2>
+                <p className="text-white/70">
+                  Track team performance, time usage, and project progress
+                </p>
+              </div>
             </div>
             <ReportsTab
               employees={employees}

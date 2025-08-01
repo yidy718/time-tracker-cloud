@@ -790,16 +790,13 @@ export default function TimeTracker({ session, employee, organization }) {
           session={completedSession}
           taskData={sessionTaskData}
           totalExpenses={sessionExpenses}
+          expensesEnabled={expensesEnabled}
           onClose={() => {
             setShowWorkSummary(false)
             setCompletedSession(null)
             setSessionTaskData(null)
             setSessionExpenses(0)
-            
-            // Show expense modal if expenses are enabled
-            if (expensesEnabled) {
-              setShowExpenseModal(true)
-            }
+            // No longer automatically show expense modal - handled by WorkSummaryModal buttons
           }}
         />
       )}

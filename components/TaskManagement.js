@@ -8,6 +8,12 @@ export default function TaskManagement({ employee }) {
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedTask, setSelectedTask] = useState(null)
+  const [showCommentsModal, setShowCommentsModal] = useState(false)
+  const [selectedTaskComments, setSelectedTaskComments] = useState([])
+  const [commentsTask, setCommentsTask] = useState(null)
+  const [loadingComments, setLoadingComments] = useState(false)
+  const [newComment, setNewComment] = useState('')
+  const [addingComment, setAddingComment] = useState(false)
   const [filters, setFilters] = useState({
     status: '',
     assignedTo: '',
@@ -37,6 +43,55 @@ export default function TaskManagement({ employee }) {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  const handleViewComments = async (task) => {
+    setCommentsTask(task)
+    setLoadingComments(true)
+    setShowCommentsModal(true)
+    setNewComment('')
+    
+    try {
+      const { data, error } = await database.getTaskComments(task.id)
+      if (error) throw error
+      setSelectedTaskComments(data || [])
+    } catch (error) {
+      console.error('Error loading task comments:', error)
+      setSelectedTaskComments([])
+    } finally {
+      setLoadingComments(false)
+    }
+  }
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !commentsTask || addingComment) return
+    
+    setAddingComment(true)
+    try {
+      const { data, error } = await database.addTaskComment(
+        commentsTask.id,
+        employee.id,
+        newComment.trim(),
+        false, // not a status change
+        null,
+        null
+      )
+      
+      if (error) throw error
+      
+      // Reload comments to show the new one
+      const { data: updatedComments, error: reloadError } = await database.getTaskComments(commentsTask.id)
+      if (reloadError) throw reloadError
+      
+      setSelectedTaskComments(updatedComments || [])
+      setNewComment('')
+      
+    } catch (error) {
+      console.error('Error adding comment:', error)
+      alert('Failed to add comment. Please try again.')
+    } finally {
+      setAddingComment(false)
+    }
+  }
 
   const handleCreateTask = async (taskData) => {
     try {
@@ -223,14 +278,23 @@ export default function TaskManagement({ employee }) {
               </div>
               <div className="flex space-x-2 ml-4">
                 <button
+                  onClick={() => handleViewComments(task)}
+                  className="text-white/60 hover:text-blue-400 text-sm"
+                  title="View Comments"
+                >
+                  💬
+                </button>
+                <button
                   onClick={() => setSelectedTask(task)}
                   className="text-white/60 hover:text-white text-sm"
+                  title="Edit Task"
                 >
                   ✏️
                 </button>
                 <button
                   onClick={() => handleDeleteTask(task.id)}
                   className="text-white/60 hover:text-red-400 text-sm"
+                  title="Delete Task"
                 >
                   🗑️
                 </button>
@@ -757,4 +821,123 @@ function TaskEditModal({ task, employees, projects, onSubmit, onClose }) {
       </div>
     </div>
   )
+
+  {/* Task Comments Modal */}
+  {showCommentsModal && (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl border border-white/20">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+              💬
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800">Task Comments</h3>
+              <p className="text-gray-600">{commentsTask?.title}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setShowCommentsModal(false)
+              setSelectedTaskComments([])
+              setCommentsTask(null)
+            }}
+            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="overflow-y-auto max-h-96">
+          {loadingComments ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading comments...</p>
+            </div>
+          ) : selectedTaskComments.length > 0 ? (
+            <div className="space-y-4">
+              {selectedTaskComments.map((comment, index) => (
+                <div key={comment.id || index} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                      {comment.employee?.first_name?.[0] || '?'}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-gray-800">
+                          {comment.employee?.first_name} {comment.employee?.last_name}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {new Date(comment.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="text-gray-700 whitespace-pre-wrap">{comment.comment_text}</p>
+                      {comment.is_status_change && (
+                        <div className="mt-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                          Status changed: {comment.old_status} → {comment.new_status}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-4">💭</div>
+              <p className="text-gray-600 text-lg">No comments yet</p>
+              <p className="text-gray-500 text-sm mt-2">Employee comments and notes will appear here</p>
+            </div>
+          )}
+        </div>
+
+        {/* Add Comment Form */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4">💬 Add Comment</h4>
+          <div className="space-y-4">
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Add your comment or note about this task..."
+              rows={3}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 resize-none"
+            />
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-gray-500">
+                Comments are visible to all team members working on this task
+              </p>
+              <button
+                onClick={handleAddComment}
+                disabled={!newComment.trim() || addingComment}
+                className="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 px-6 rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {addingComment ? (
+                  <span className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Adding...</span>
+                  </span>
+                ) : (
+                  '📝 Add Comment'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={() => {
+              setShowCommentsModal(false)
+              setSelectedTaskComments([])
+              setCommentsTask(null)
+              setNewComment('')
+            }}
+            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-6 rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
 }
