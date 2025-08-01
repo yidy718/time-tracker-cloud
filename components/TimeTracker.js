@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { database, auth } from '../lib/supabase'
 import EmployeeTaskDashboard from './EmployeeTaskDashboard'
 import ExpenseModal from './ExpenseModal'
+import WorkSummaryModal from './WorkSummaryModal'
 
 export default function TimeTracker({ session, employee, organization }) {
   // Core state
@@ -23,6 +24,10 @@ export default function TimeTracker({ session, employee, organization }) {
   const [showTaskSelection, setShowTaskSelection] = useState(false)
   const [showTaskDashboard, setShowTaskDashboard] = useState(false)
   const [showExpenseModal, setShowExpenseModal] = useState(false)
+  const [showWorkSummary, setShowWorkSummary] = useState(false)
+  const [completedSession, setCompletedSession] = useState(null)
+  const [sessionTaskData, setSessionTaskData] = useState(null)
+  const [sessionExpenses, setSessionExpenses] = useState(0)
   
   
   // Data state
@@ -330,6 +335,21 @@ export default function TimeTracker({ session, employee, organization }) {
         console.warn('Cannot update task - employee.id is missing:', employee)
       }
       
+      // Store session data for work summary before clearing states
+      setCompletedSession(currentSession)
+      
+      // Get task data if working on a task
+      if (currentSession.task_id) {
+        const task = employeeTasks.find(t => t.id === currentSession.task_id) || 
+                    availableTasks.find(t => t.id === currentSession.task_id)
+        if (task) {
+          setSessionTaskData({
+            title: task.title,
+            progress: taskProgress || task.progress_percentage
+          })
+        }
+      }
+      
       setCurrentSession(null)
       setIsOnBreak(false)
       setBreakStartTime(null)
@@ -338,10 +358,8 @@ export default function TimeTracker({ session, employee, organization }) {
       setTaskProgress(0)
       setTaskNotes('')
       
-      // Show expense modal if expenses are enabled
-      if (expensesEnabled) {
-        setShowExpenseModal(true)
-      }
+      // Show work summary instead of expense modal
+      setShowWorkSummary(true)
       
       await loadTotalHours()
       await loadTasks() // Refresh tasks to show updated progress
@@ -762,6 +780,27 @@ export default function TimeTracker({ session, employee, organization }) {
           loading={loading}
           employee={employee}
           onAddExpense={handleAddExpenseFromClockOut}
+        />
+      )}
+
+      {/* Work Summary Modal */}
+      {showWorkSummary && (
+        <WorkSummaryModal
+          employee={employee}
+          session={completedSession}
+          taskData={sessionTaskData}
+          totalExpenses={sessionExpenses}
+          onClose={() => {
+            setShowWorkSummary(false)
+            setCompletedSession(null)
+            setSessionTaskData(null)
+            setSessionExpenses(0)
+            
+            // Show expense modal if expenses are enabled
+            if (expensesEnabled) {
+              setShowExpenseModal(true)
+            }
+          }}
         />
       )}
 
