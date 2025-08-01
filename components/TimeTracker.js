@@ -304,25 +304,18 @@ export default function TimeTracker({ session, employee, organization }) {
       })
 
       // Clock out from time session
-      console.log('Calling database.clockOut...')
-      const clockOutResult = await database.clockOut(currentSession.id, clockOutMemo.trim() || null)
-      console.log('Database.clockOut result:', clockOutResult)
-      
-      if (clockOutResult.error) throw clockOutResult.error
-      
-      console.log('Clock out successful, updating task if needed...')
+      const { data, error } = await database.clockOut(currentSession.id, clockOutMemo.trim() || null)
+      if (error) throw error
       
       // If working on a task, update task progress
       if (currentSession.task_id && taskProgress > 0 && employee?.id) {
         try {
-          console.log('Updating task progress...')
           await database.updateTask(currentSession.task_id, {
             progress_percentage: taskProgress
           })
           
           // Add comment about work done
           if (taskNotes.trim()) {
-            console.log('Adding task comment...')
             await database.addTaskComment(
               currentSession.task_id,
               employee.id,
@@ -337,7 +330,6 @@ export default function TimeTracker({ session, employee, organization }) {
         console.warn('Cannot update task - employee.id is missing:', employee)
       }
       
-      console.log('Clearing states...')
       setCurrentSession(null)
       setIsOnBreak(false)
       setBreakStartTime(null)
@@ -346,11 +338,8 @@ export default function TimeTracker({ session, employee, organization }) {
       setTaskProgress(0)
       setTaskNotes('')
       
-      console.log('Checking if expense modal should show...', { expensesEnabled })
-      
       // Show expense modal if expenses are enabled
       if (expensesEnabled) {
-        console.log('Showing expense modal...')
         setShowExpenseModal(true)
       }
       

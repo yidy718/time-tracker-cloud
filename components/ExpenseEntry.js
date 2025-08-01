@@ -9,12 +9,6 @@ export default function ExpenseEntry({ employee, organizationId, timeSessionId =
   const [recentExpenses, setRecentExpenses] = useState([])
   const [showRecentExpenses, setShowRecentExpenses] = useState(true)
 
-  useEffect(() => {
-    if (showRecentExpenses) {
-      loadRecentExpenses()
-    }
-  }, [employee.id, showRecentExpenses, loadRecentExpenses])
-
   const loadRecentExpenses = useCallback(async () => {
     try {
       const { data } = await database.getEmployeeExpenses(employee.id, organizationId, 30) // last 30 days
@@ -23,6 +17,12 @@ export default function ExpenseEntry({ employee, organizationId, timeSessionId =
       console.error('Error loading recent expenses:', error)
     }
   }, [employee.id, organizationId])
+
+  useEffect(() => {
+    if (showRecentExpenses) {
+      loadRecentExpenses()
+    }
+  }, [showRecentExpenses, loadRecentExpenses])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
