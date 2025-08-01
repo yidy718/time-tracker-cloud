@@ -72,7 +72,15 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
   const handleQuickStatusChange = async (taskId, newStatus) => {
     try {
       console.log('🔄 Updating task status:', { taskId, newStatus, employeeId: employee.id })
-      const result = await database.updateTask(taskId, { status: newStatus })
+      
+      // When marking as completed, automatically set progress to 100%
+      const updates = { status: newStatus }
+      if (newStatus === 'completed') {
+        updates.progress_percentage = 100
+        console.log('🎯 Setting progress to 100% since task is being marked as completed')
+      }
+      
+      const result = await database.updateTask(taskId, updates)
       if (result.error) {
         console.error('❌ Status update failed:', result.error)
         alert(`Error updating task status: ${result.error.message || 'Permission denied'}`)
@@ -592,7 +600,12 @@ function TaskProgressModal({ task, onUpdate, onClose }) {
                 <button
                   key={status}
                   type="button"
-                  onClick={() => setFormData({...formData, status})}
+                  onClick={() => setFormData({
+                    ...formData, 
+                    status,
+                    // Auto-set progress to 100% when marking as completed
+                    progress_percentage: status === 'completed' ? 100 : formData.progress_percentage
+                  })}
                   className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
                     formData.status === status 
                       ? getStatusColor(status)
