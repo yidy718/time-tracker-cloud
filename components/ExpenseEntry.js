@@ -141,7 +141,7 @@ export default function ExpenseEntry({ employee, organizationId, timeSessionId =
                 className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                 disabled={loading}
               >
-                Cancel
+                🚪 Clock Out
               </button>
             )}
             <button
