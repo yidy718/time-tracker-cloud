@@ -35,6 +35,14 @@ export default function TimeTracker({ session, employee, organization }) {
 
   const loadTotalHours = useCallback(async () => {
     try {
+      // Check if employee object is available
+      if (!employee?.id || !employee?.organization_id) {
+        console.warn('loadTotalHours: Employee object missing required fields:', employee)
+        setTotalHours(0)
+        setWeeklyActivities([])
+        return
+      }
+
       const now = new Date()
       const startOfWeek = new Date(now)
       // Get Monday as start of week (getDay() returns 0=Sunday, 1=Monday, etc.)
@@ -63,10 +71,18 @@ export default function TimeTracker({ session, employee, organization }) {
     } catch (error) {
       console.error('Error loading total hours:', error)
     }
-  }, [employee.organization_id, employee.id])
+  }, [employee?.organization_id, employee?.id])
 
   const loadTasks = useCallback(async (projectId = null) => {
     try {
+      // Check if employee object is available
+      if (!employee?.id || !employee?.organization_id) {
+        console.warn('loadTasks: Employee object missing required fields:', employee)
+        setEmployeeTasks([])
+        setAvailableTasks([])
+        return
+      }
+
       // Load employee's assigned tasks
       const employeeTasksResult = await database.getEmployeeTasks(employee.id, null)
       let employeeTasks = employeeTasksResult.data || []
@@ -90,10 +106,19 @@ export default function TimeTracker({ session, employee, organization }) {
     } catch (error) {
       console.error('Error loading tasks:', error)
     }
-  }, [employee.id, employee.organization_id])
+  }, [employee?.id, employee?.organization_id])
 
   const loadData = useCallback(async () => {
     try {
+      // Check if employee object is available
+      if (!employee?.id || !employee?.organization_id) {
+        console.warn('loadData: Employee object missing required fields:', employee)
+        setCurrentSession(null)
+        setProjects([])
+        setExpensesEnabled(false)
+        return
+      }
+
       // Load current session
       const { data: sessionData } = await database.getCurrentSession(employee.id)
       setCurrentSession(sessionData)
@@ -134,7 +159,7 @@ export default function TimeTracker({ session, employee, organization }) {
             supabase
               .from('client_projects')
               .select('*')
-              .eq('organization_id', employee.organization_id)
+              .eq('organization_id', employee?.organization_id)
               .then(({ data, error }) => {
                 console.log('Direct client_projects query result:', { data, error })
               })
@@ -143,7 +168,7 @@ export default function TimeTracker({ session, employee, organization }) {
             supabase
               .from('client_projects')
               .select('*', { count: 'exact', head: true })
-              .eq('organization_id', employee.organization_id)
+              .eq('organization_id', employee?.organization_id)
               .then(({ count, error }) => {
                 console.log('Projects count test:', { count, error })
               })
@@ -283,6 +308,11 @@ export default function TimeTracker({ session, employee, organization }) {
 
   const handleAddExpenseFromClockOut = async (expenseData) => {
     try {
+      if (!employee?.id || !employee?.organization_id) {
+        console.error('Cannot add expense - employee object missing required fields:', employee)
+        throw new Error('Employee information is not available')
+      }
+
       const expense = {
         employee_id: employee.id,
         organization_id: employee.organization_id,
@@ -314,12 +344,19 @@ export default function TimeTracker({ session, employee, organization }) {
 
     setLoading(true)
     try {
+      console.log('Clock out starting:', { 
+        sessionId: currentSession.id, 
+        employeeId: employee?.id,
+        employeeObject: employee,
+        taskId: currentSession.task_id 
+      })
+
       // Clock out from time session
       const { data, error } = await database.clockOut(currentSession.id, clockOutMemo.trim() || null)
       if (error) throw error
       
       // If working on a task, update task progress
-      if (currentSession.task_id && taskProgress > 0) {
+      if (currentSession.task_id && taskProgress > 0 && employee?.id) {
         try {
           await database.updateTask(currentSession.task_id, {
             progress_percentage: taskProgress
@@ -337,6 +374,8 @@ export default function TimeTracker({ session, employee, organization }) {
           console.error('Error updating task:', taskError)
           // Don't fail clock out if task update fails
         }
+      } else if (currentSession.task_id && !employee?.id) {
+        console.warn('Cannot update task - employee.id is missing:', employee)
       }
       
       setCurrentSession(null)
@@ -442,12 +481,12 @@ export default function TimeTracker({ session, employee, organization }) {
               </div>
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-lg">
-                  {employee.first_name[0]}{employee.last_name[0]}
+                  {employee?.first_name?.[0] || '?'}{employee?.last_name?.[0] || '?'}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="text-white/90 font-semibold text-base sm:text-lg block truncate">{employee.first_name} {employee.last_name}</span>
+                  <span className="text-white/90 font-semibold text-base sm:text-lg block truncate">{employee?.first_name || 'Unknown'} {employee?.last_name || 'Employee'}</span>
                   <div className="flex items-center space-x-2 mt-1">
-                    <span className="px-2 sm:px-3 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium truncate max-w-[150px]">{employee.organization?.name}</span>
+                    <span className="px-2 sm:px-3 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium truncate max-w-[150px]">{employee?.organization?.name || 'Unknown Organization'}</span>
                   </div>
                 </div>
               </div>
@@ -796,7 +835,7 @@ export default function TimeTracker({ session, employee, organization }) {
       {showExpenseModal && (
         <ExpenseModal
           employee={employee}
-          organizationId={employee.organization_id}
+          organizationId={employee?.organization_id}
           timeSessionId={null}
           onClose={() => setShowExpenseModal(false)}
           onExpenseAdded={() => {
@@ -984,7 +1023,7 @@ function WeeklyActivitiesModal({ activities, employee, onClose }) {
             </div>
             <div>
               <h3 className="text-2xl font-bold text-gray-800">Weekly Activities</h3>
-              <p className="text-gray-600">{employee.first_name} {employee.last_name}</p>
+              <p className="text-gray-600">{employee?.first_name || 'Unknown'} {employee?.last_name || 'Employee'}</p>
             </div>
           </div>
           <button
