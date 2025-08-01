@@ -127,11 +127,6 @@ export default function TimeTracker({ session, employee, organization }) {
       setCurrentSession(sessionData)
 
       // Check if expenses are enabled for this employee
-      console.log('Employee expense check:', {
-        email: employee.email,
-        can_expense: employee.can_expense,
-        expenseEnabled: employee.can_expense || false
-      })
       setExpensesEnabled(employee.can_expense || false)
 
       // Load projects (locations come from projects now)
@@ -344,16 +339,8 @@ export default function TimeTracker({ session, employee, organization }) {
       setTaskNotes('')
       
       // Show expense modal if expenses are enabled
-      console.log('Clock out complete - checking expense modal:', {
-        expensesEnabled,
-        employee_can_expense: employee?.can_expense,
-        showExpenseModal: expensesEnabled
-      })
       if (expensesEnabled) {
-        console.log('✅ Showing expense modal after clock-out')
         setShowExpenseModal(true)
-      } else {
-        console.log('❌ NOT showing expense modal - expensesEnabled is false')
       }
       
       await loadTotalHours()
@@ -1340,7 +1327,6 @@ function ClockOutModal({ memo, onMemoChange, taskProgress, onTaskProgressChange,
           </div>
 
           {/* Expense Entry Section */}
-          {console.log('Clock-out modal expense check:', { can_expense: employee?.can_expense, email: employee?.email })}
           {employee?.can_expense && (
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
               <div className="flex items-center justify-between mb-3">

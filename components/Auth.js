@@ -41,6 +41,7 @@ export default function Auth() {
             email: employee.email,
             role: employee.role,
             is_active: employee.is_active,
+            can_expense: employee.can_expense, // ✅ Added missing can_expense field!
             organizations: employee.organizations
           }
         }))
