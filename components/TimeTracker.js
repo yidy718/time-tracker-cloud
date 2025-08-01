@@ -4,34 +4,41 @@ import EmployeeTaskDashboard from './EmployeeTaskDashboard'
 import ExpenseModal from './ExpenseModal'
 
 export default function TimeTracker({ session, employee, organization }) {
+  // Core state
   const [currentSession, setCurrentSession] = useState(null)
   const [projects, setProjects] = useState([])
   const [selectedProject, setSelectedProject] = useState('')
   const [currentTime, setCurrentTime] = useState(new Date())
   const [loading, setLoading] = useState(false)
+  
+  // UI state
   const [showBreakModal, setShowBreakModal] = useState(false)
   const [breakReason, setBreakReason] = useState('')
   const [isOnBreak, setIsOnBreak] = useState(false)
   const [breakStartTime, setBreakStartTime] = useState(null)
   const [showMenu, setShowMenu] = useState(false)
   const [showPasswordChange, setShowPasswordChange] = useState(false)
-  const [totalHours, setTotalHours] = useState(0)
   const [showWeeklyActivities, setShowWeeklyActivities] = useState(false)
-  const [weeklyActivities, setWeeklyActivities] = useState([])
   const [showClockOutModal, setShowClockOutModal] = useState(false)
+  const [showTaskSelection, setShowTaskSelection] = useState(false)
+  const [showTaskDashboard, setShowTaskDashboard] = useState(false)
+  const [showExpenseModal, setShowExpenseModal] = useState(false)
+  
+  // Location selection state
+  const [showLocationSelection, setShowLocationSelection] = useState(false)
+  const [projectLocations, setProjectLocations] = useState([])
+  const [selectedLocation, setSelectedLocation] = useState('')
+  
+  // Data state
+  const [totalHours, setTotalHours] = useState(0)
+  const [weeklyActivities, setWeeklyActivities] = useState([])
   const [clockOutMemo, setClockOutMemo] = useState('')
   const [availableTasks, setAvailableTasks] = useState([])
   const [employeeTasks, setEmployeeTasks] = useState([])
   const [selectedTask, setSelectedTask] = useState('')
-  const [showTaskSelection, setShowTaskSelection] = useState(false)
   const [taskProgress, setTaskProgress] = useState(0)
   const [taskNotes, setTaskNotes] = useState('')
-  const [showTaskDashboard, setShowTaskDashboard] = useState(false)
-  const [showExpenseModal, setShowExpenseModal] = useState(false)
   const [expensesEnabled, setExpensesEnabled] = useState(false)
-  const [showLocationSelection, setShowLocationSelection] = useState(false)
-  const [projectLocations, setProjectLocations] = useState([])
-  const [selectedLocation, setSelectedLocation] = useState('')
 
   const loadTotalHours = useCallback(async () => {
     try {

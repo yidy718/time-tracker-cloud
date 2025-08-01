@@ -2607,14 +2607,23 @@ function ProjectLocationModal({ project, organizationId, onSuccess, onCancel }) 
     setLoading(true)
     try {
       const isFirst = projectLocations.length === 0
-      const { error } = await database.addProjectLocation(project.id, locationId, isFirst)
-      if (error) throw error
+      console.log('Adding location:', { projectId: project.id, locationId, isFirst })
+      
+      const { data, error } = await database.addProjectLocation(project.id, locationId, isFirst)
+      
+      console.log('Add location result:', { data, error })
+      
+      if (error) {
+        console.error('Database error details:', error)
+        throw error
+      }
       
       await loadProjectLocations()
       alert('Location added successfully!')
     } catch (error) {
       console.error('Error adding location:', error)
-      alert('Error adding location. Please try again.')
+      console.error('Error details:', error.message, error.code, error.details)
+      alert(`Error adding location: ${error.message || 'Please try again.'}`)
     }
     setLoading(false)
   }
