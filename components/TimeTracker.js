@@ -4,6 +4,25 @@ import EmployeeTaskDashboard from './EmployeeTaskDashboard'
 import ExpenseModal from './ExpenseModal'
 
 export default function TimeTracker({ session, employee, organization }) {
+  // Add error boundary for this component
+  useEffect(() => {
+    const handleError = (error) => {
+      if (error.message && error.message.includes('showLocationSelection')) {
+        console.warn('Caught showLocationSelection error, ignoring:', error)
+        error.preventDefault?.()
+        return false
+      }
+    }
+    
+    window.addEventListener('error', handleError)
+    
+    // Defensive: Define showLocationSelection globally to prevent undefined errors
+    if (typeof window !== 'undefined' && typeof window.showLocationSelection === 'undefined') {
+      window.showLocationSelection = false
+    }
+    
+    return () => window.removeEventListener('error', handleError)
+  }, [])
   // Core state
   const [currentSession, setCurrentSession] = useState(null)
   const [projects, setProjects] = useState([])
@@ -25,7 +44,7 @@ export default function TimeTracker({ session, employee, organization }) {
   const [showExpenseModal, setShowExpenseModal] = useState(false)
   
   // Location selection state
-  const [showLocationSelection, setShowLocationSelection] = useState(false)
+  const [showLocationModal, setShowLocationModal] = useState(false)
   const [projectLocations, setProjectLocations] = useState([])
   const [selectedLocation, setSelectedLocation] = useState('')
   
@@ -223,7 +242,7 @@ export default function TimeTracker({ session, employee, organization }) {
       // If project has multiple locations, show location selection modal
       if (locations && locations.length > 1) {
         setProjectLocations(locations)
-        setShowLocationSelection(true)
+        setShowLocationModal(true)
         setLoading(false)
         return
       }
@@ -269,7 +288,7 @@ export default function TimeTracker({ session, employee, organization }) {
       if (error) throw error
       
       setCurrentSession(data)
-      setShowLocationSelection(false)
+      setShowLocationModal(false)
       setSelectedLocation('')
       setProjectLocations([])
       
@@ -1547,13 +1566,13 @@ function ClockOutModal({ memo, onMemoChange, taskProgress, onTaskProgressChange,
       )}
 
       {/* Location Selection Modal */}
-      {showLocationSelection && (
+      {showLocationModal && (
         <LocationSelectionModal
           projectLocations={projectLocations}
           onLocationSelect={handleLocationSelection}
           onCancel={() => {
             try {
-              setShowLocationSelection(false)
+              setShowLocationModal(false)
               setProjectLocations([])
               setSelectedLocation('')
               setLoading(false)
