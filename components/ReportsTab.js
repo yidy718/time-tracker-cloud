@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { database } from '../lib/supabase'
 
 export default function ReportsTab({ employees, organizationId, organization, isManagerView = false }) {
@@ -13,6 +13,13 @@ export default function ReportsTab({ employees, organizationId, organization, is
   const [loading, setLoading] = useState(false)
   const [showShareOptions, setShowShareOptions] = useState(false)
   const [reportType, setReportType] = useState('combined') // 'time', 'tasks', 'combined'
+  
+  // Comment modal states
+  const [showCommentsModal, setShowCommentsModal] = useState(false)
+  const [commentsTask, setCommentsTask] = useState(null)
+  const [selectedTaskComments, setSelectedTaskComments] = useState([])
+  const [newComment, setNewComment] = useState('')
+  const [addingComment, setAddingComment] = useState(false)
 
   // Check if this is V.A.S Tri State organization
   const isVAS = organization?.name?.toLowerCase().includes('v.a.s') || organization?.name?.toLowerCase().includes('vas')
@@ -60,6 +67,98 @@ export default function ReportsTab({ employees, organizationId, organization, is
     loadLocations()
     loadProjects()
   }, [organizationId])
+
+  // Comment handling functions
+  const handleViewComments = async (task) => {
+    setCommentsTask(task)
+    setShowCommentsModal(true)
+    
+    try {
+      const { data, error } = await database.getTaskComments(task.id)
+      if (error) throw error
+      setSelectedTaskComments(data || [])
+    } catch (error) {
+      console.error('Error loading task comments:', error)
+      setSelectedTaskComments([])
+    }
+  }
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !commentsTask || addingComment) return
+    
+    setAddingComment(true)
+    try {
+      // Get current user info (assuming we have employee access)
+      const currentEmployee = employees.find(emp => emp.role === 'admin') || employees[0]
+      
+      const { data, error } = await database.addTaskComment(
+        commentsTask.id,
+        currentEmployee.id,
+        newComment.trim(),
+        false, null, null
+      )
+      
+      if (error) throw error
+      
+      // Reload comments
+      const { data: updatedComments, error: reloadError } = await database.getTaskComments(commentsTask.id)
+      if (reloadError) throw reloadError
+      
+      setSelectedTaskComments(updatedComments || [])
+      setNewComment('')
+    } catch (error) {
+      console.error('Error adding comment:', error)
+      alert('Failed to add comment. Please try again.')
+    } finally {
+      setAddingComment(false)
+    }
+  }
+
+  // Calculate total cost including expenses for a task
+  const calculateTaskTotalCost = (task) => {
+    let totalCost = 0
+    
+    // Add labor cost
+    if (task.actual_hours && task.assigned_employee?.hourly_rate) {
+      totalCost += parseFloat(task.actual_hours) * task.assigned_employee.hourly_rate
+    }
+    
+    // Add expenses for this task
+    if (reportData?.expenses) {
+      const taskExpenses = reportData.expenses.filter(expense => 
+        expense.task_id === task.id || 
+        (expense.project_id === task.project_id && task.project_id)
+      )
+      const expensesTotal = taskExpenses.reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0)
+      totalCost += expensesTotal
+    }
+    
+    return totalCost
+  }
+
+  // Calculate total cost including expenses for a project
+  const calculateProjectTotalCost = (projectId) => {
+    let totalCost = 0
+    
+    // Add labor costs from all tasks in the project
+    if (reportData?.taskSummary) {
+      const projectTasks = reportData.taskSummary.filter(task => task.project_id === projectId)
+      projectTasks.forEach(task => {
+        if (task.actual_hours && task.assigned_employee?.hourly_rate) {
+          totalCost += parseFloat(task.actual_hours) * task.assigned_employee.hourly_rate
+        }
+      })
+    }
+    
+    // Add expenses for this project
+    if (reportData?.expenses) {
+      const projectExpenses = reportData.expenses.filter(expense => expense.project_id === projectId)
+      const expensesTotal = projectExpenses.reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0)
+      totalCost += expensesTotal
+    }
+    
+    return totalCost
+  }
 
   const generateReport = async () => {
     setLoading(true)
@@ -961,29 +1060,20 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
                           {task.estimated_hours ? ` / ${task.estimated_hours}h estimated` : ''}
                           {task.actual_hours && task.assigned_employee?.hourly_rate && (
                             <span className="text-green-400 ml-2">
-                              • $${(parseFloat(task.actual_hours) * task.assigned_employee.hourly_rate).toFixed(2)} cost
+                              • $${(parseFloat(task.actual_hours) * task.assigned_employee.hourly_rate).toFixed(2)} pay
+                              {(() => {
+                                const totalCost = calculateTaskTotalCost(task)
+                                const laborCost = parseFloat(task.actual_hours) * task.assigned_employee.hourly_rate
+                                const expenseCost = totalCost - laborCost
+                                return expenseCost > 0 ? ` + $${expenseCost.toFixed(2)} expenses = $${totalCost.toFixed(2)} total` : ''
+                              })()}
                             </span>
                           )}
                         </span>
                         <button
-                          onClick={async () => {
-                            // Load and show task comments for this task
-                            try {
-                              const { data } = await database.getTaskComments(task.id)
-                              if (data && data.length > 0) {
-                                const commentsList = data.map(c => 
-                                  `${c.employee?.first_name} ${c.employee?.last_name} (${new Date(c.created_at).toLocaleString()}): ${c.comment_text}`
-                                ).join('\n\n')
-                                alert(`Task Comments for "${task.title}":\n\n${commentsList}`)
-                              } else {
-                                alert(`No comments found for "${task.title}"`)
-                              }
-                            } catch (error) {
-                              console.error('Error loading task comments:', error)
-                              alert('Error loading task comments')
-                            }
-                          }}
+                          onClick={() => handleViewComments(task)}
                           className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded hover:bg-blue-500/30 transition-colors"
+                          title="View Comments"
                         >
                           💬 Comments
                         </button>
@@ -1120,7 +1210,7 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
                           <h5 className="font-medium text-white">{project.project_name}</h5>
                           <span className="text-xs text-white/60">{project.client_name}</span>
                         </div>
-                        <div className="grid grid-cols-4 gap-2 text-xs">
+                        <div className="grid grid-cols-5 gap-2 text-xs">
                           <div className="text-center">
                             <span className="text-white/60">Total</span>
                             <p className="font-bold text-white">{project.total_tasks || 0}</p>
@@ -1136,6 +1226,12 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
                           <div className="text-center">
                             <span className="text-blue-400">Hours</span>
                             <p className="font-bold text-blue-400">{parseFloat(project.total_actual_hours || 0).toFixed(1)}h</p>
+                          </div>
+                          <div className="text-center">
+                            <span className="text-purple-400">Total Cost</span>
+                            <p className="font-bold text-purple-400">
+                              ${calculateProjectTotalCost(project.project_id).toFixed(2)}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -1196,6 +1292,86 @@ ${selectedProject !== 'all' ? `🎯 Project: ${reportData[0]?.project_name || 'N
                 <span className="text-lg">📱</span>
                 <span className="font-medium text-gray-700">Share via SMS</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comments Modal */}
+      {showCommentsModal && commentsTask && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-2xl w-full max-h-[80vh] shadow-2xl border border-white/20 overflow-hidden flex flex-col">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Task Comments</h3>
+                <p className="text-gray-600">{commentsTask?.title}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowCommentsModal(false)
+                  setCommentsTask(null)
+                  setSelectedTaskComments([])
+                  setNewComment('')
+                }}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-hidden flex flex-col">
+              {/* Comments List */}
+              <div className="flex-1 overflow-y-auto mb-6 space-y-4">
+                {selectedTaskComments.length > 0 ? (
+                  selectedTaskComments.map((comment, index) => (
+                    <div key={comment.id || index} className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-medium text-gray-800">
+                          {comment.employee?.first_name} {comment.employee?.last_name}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {new Date(comment.created_at).toLocaleDateString()} {new Date(comment.created_at).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <p className="text-gray-700">{comment.comment_text}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-gray-500 italic py-8">
+                    No comments yet. Be the first to add one!
+                  </div>
+                )}
+              </div>
+              
+              {/* Add Comment Form */}
+              <div className="border-t pt-4">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4">💬 Add Comment</h4>
+                <div className="space-y-4">
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Enter your comment..."
+                    className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows="3"
+                  />
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      onClick={() => setNewComment('')}
+                      className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                      disabled={addingComment}
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={handleAddComment}
+                      disabled={!newComment.trim() || addingComment}
+                      className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                    >
+                      {addingComment ? 'Adding...' : 'Add Comment'}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
