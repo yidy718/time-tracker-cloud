@@ -43,10 +43,6 @@ export default function TimeTracker({ session, employee, organization }) {
   const [showTaskDashboard, setShowTaskDashboard] = useState(false)
   const [showExpenseModal, setShowExpenseModal] = useState(false)
   
-  // Location selection state
-  const [showLocationModal, setShowLocationModal] = useState(false)
-  const [projectLocations, setProjectLocations] = useState([])
-  const [selectedLocation, setSelectedLocation] = useState('')
   
   // Data state
   const [totalHours, setTotalHours] = useState(0)
@@ -232,28 +228,9 @@ export default function TimeTracker({ session, employee, organization }) {
 
     setLoading(true)
     try {
-      // First, check if the project has multiple locations
-      const { data: locations, error: locError } = await database.getProjectLocations(selectedProject)
-      if (locError) {
-        console.error('Error getting project locations:', locError)
-        // Continue with clock-in without location if we can't fetch locations
-      }
-      
-      // If project has multiple locations, show location selection modal
-      if (locations && locations.length > 1) {
-        setProjectLocations(locations)
-        setShowLocationModal(true)
-        setLoading(false)
-        return
-      }
-      
-      // If project has only one location or no specific locations, clock in directly
-      const locationId = locations && locations.length === 1 ? locations[0].location_id : null
-      
       const { data, error } = await database.clockIn(
         employee.id, 
-        selectedProject,
-        locationId
+        selectedProject
       )
       if (error) throw error
       
@@ -272,38 +249,6 @@ export default function TimeTracker({ session, employee, organization }) {
     setLoading(false)
   }
 
-  const handleLocationSelection = async (locationId) => {
-    if (!selectedProject) {
-      alert('Please select a project')
-      return
-    }
-
-    setLoading(true)
-    try {
-      const { data, error } = await database.clockIn(
-        employee.id, 
-        selectedProject,
-        locationId
-      )
-      if (error) throw error
-      
-      setCurrentSession(data)
-      setShowLocationModal(false)
-      setSelectedLocation('')
-      setProjectLocations([])
-      
-      // Load tasks filtered by the selected project
-      await loadTasks(selectedProject)
-      
-      // Show task selection modal after successful clock-in
-      setShowTaskSelection(true)
-      
-    } catch (error) {
-      console.error('Clock in error:', error)
-      alert('Error clocking in. Please try again.')
-    }
-    setLoading(false)
-  }
 
   const handleTaskSelection = async (taskId = null) => {
     try {
@@ -664,24 +609,6 @@ export default function TimeTracker({ session, employee, organization }) {
                     </p>
                   )}
                 </div>
-                {/* Show selected project locations */}
-                {selectedProject && (
-                  <div className="text-white/70 text-sm">
-                    {(() => {
-                      const project = projects.find(p => p.id === selectedProject)
-                      const locations = project?.available_locations || []
-                      const primaryLocation = project?.primary_location
-                      
-                      if (locations.length === 0) {
-                        return '📍 Location: No location assigned'
-                      } else if (locations.length === 1) {
-                        return `📍 Location: ${locations[0].name}`
-                      } else {
-                        return `📍 Locations: ${locations.length} available${primaryLocation ? ` (Primary: ${primaryLocation.name})` : ''}`
-                      }
-                    })()}
-                  </div>
-                )}
                 
                 <button
                   onClick={handleClockIn}
@@ -1565,145 +1492,7 @@ function ClockOutModal({ memo, onMemoChange, taskProgress, onTaskProgressChange,
         </div>
       )}
 
-      {/* Location Selection Modal */}
-      {showLocationModal && (
-        <LocationSelectionModal
-          projectLocations={projectLocations}
-          onLocationSelect={handleLocationSelection}
-          onCancel={() => {
-            try {
-              setShowLocationModal(false)
-              setProjectLocations([])
-              setSelectedLocation('')
-              setLoading(false)
-            } catch (error) {
-              console.error('Error in location modal cancel:', error)
-            }
-          }}
-          loading={loading}
-        />
-      )}
     </div>
   )
 }
 
-// Location Selection Modal Component
-function LocationSelectionModal({ projectLocations, onLocationSelect, onCancel, loading }) {
-  const [selectedLocationId, setSelectedLocationId] = useState('')
-
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    if (!selectedLocationId) {
-      alert('Please select a location')
-      return
-    }
-    onLocationSelect(selectedLocationId)
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-white/20">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
-              📍
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-800">Select Work Location</h3>
-              <p className="text-gray-600 text-sm">This project has multiple locations</p>
-            </div>
-          </div>
-          <button
-            onClick={onCancel}
-            disabled={loading}
-            className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50"
-          >
-            ×
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Choose your work location for this session:
-            </label>
-            <div className="space-y-2">
-              {projectLocations.map((projectLocation) => (
-                <label
-                  key={projectLocation.location_id}
-                  className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    selectedLocationId === projectLocation.location_id
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="location"
-                    value={projectLocation.location_id}
-                    checked={selectedLocationId === projectLocation.location_id}
-                    onChange={(e) => setSelectedLocationId(e.target.value)}
-                    className="sr-only"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-4 h-4 rounded-full border-2 ${
-                        selectedLocationId === projectLocation.location_id
-                          ? 'border-purple-500 bg-purple-500'
-                          : 'border-gray-300'
-                      }`}>
-                        {selectedLocationId === projectLocation.location_id && (
-                          <div className="w-full h-full rounded-full bg-white scale-50"></div>
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-900 flex items-center space-x-2">
-                          <span>{projectLocation.location?.name}</span>
-                          {projectLocation.is_primary && (
-                            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
-                              PRIMARY
-                            </span>
-                          )}
-                        </div>
-                        {projectLocation.location?.address && (
-                          <div className="text-sm text-gray-500 mt-1">
-                            {projectLocation.location.address}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={loading}
-              className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !selectedLocationId}
-              className="flex-1 bg-gradient-to-r from-purple-500 to-indigo-600 text-white py-3 rounded-lg font-medium hover:from-purple-600 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Clocking In...</span>
-                </span>
-              ) : (
-                'Clock In at This Location'
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
