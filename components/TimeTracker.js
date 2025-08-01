@@ -4,25 +4,6 @@ import EmployeeTaskDashboard from './EmployeeTaskDashboard'
 import ExpenseModal from './ExpenseModal'
 
 export default function TimeTracker({ session, employee, organization }) {
-  // Add error boundary for this component
-  useEffect(() => {
-    const handleError = (error) => {
-      if (error.message && error.message.includes('showLocationSelection')) {
-        console.warn('Caught showLocationSelection error, ignoring:', error)
-        error.preventDefault?.()
-        return false
-      }
-    }
-    
-    window.addEventListener('error', handleError)
-    
-    // Defensive: Define showLocationSelection globally to prevent undefined errors
-    if (typeof window !== 'undefined' && typeof window.showLocationSelection === 'undefined') {
-      window.showLocationSelection = false
-    }
-    
-    return () => window.removeEventListener('error', handleError)
-  }, [])
   // Core state
   const [currentSession, setCurrentSession] = useState(null)
   const [projects, setProjects] = useState([])
