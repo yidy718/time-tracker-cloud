@@ -170,6 +170,7 @@ export default function AdminDashboard({ session, employee, organization }) {
             activeSessions={activeSessions}
             employees={employees}
             locations={locations}
+            onRefresh={loadData}
           />
         )}
         
@@ -234,7 +235,9 @@ export default function AdminDashboard({ session, employee, organization }) {
   )
 }
 
-function DashboardTab({ activeSessions, employees, locations }) {
+function DashboardTab({ activeSessions, employees, locations, onRefresh }) {
+  const [loading, setLoading] = useState(false)
+
   const formatDuration = (startTime) => {
     const start = new Date(startTime)
     const now = new Date()
@@ -244,6 +247,80 @@ function DashboardTab({ activeSessions, employees, locations }) {
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
     
     return `${hours}h ${minutes}m`
+  }
+
+  const handleForceClockOut = async (session) => {
+    const employeeName = `${session.first_name} ${session.last_name}`
+    
+    if (!confirm(`Are you sure you want to force clock-out ${employeeName}?\n\nThis will end their current work session.`)) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      console.log('Force clocking out session:', session.id, 'for employee:', employeeName)
+      
+      const { data, error } = await database.clockOut(session.id, 'Admin force clock-out')
+      
+      if (error) {
+        console.error('Force clock-out error:', error)
+        throw error
+      }
+      
+      console.log('Force clock-out successful:', data)
+      alert(`✅ ${employeeName} has been successfully clocked out.`)
+      
+      // Refresh the admin dashboard
+      if (onRefresh) {
+        await onRefresh()
+      }
+    } catch (error) {
+      console.error('Error force clocking out employee:', error)
+      alert(`❌ Error clocking out ${employeeName}: ${error.message || 'Please try again.'}`)
+    }
+    setLoading(false)
+  }
+
+  const handleForceClockOutAll = async () => {
+    const employeeCount = activeSessions.length
+    const employeeNames = activeSessions.map(s => `${s.first_name} ${s.last_name}`).join(', ')
+    
+    if (!confirm(`Are you sure you want to force clock-out ALL ${employeeCount} employees?\n\nEmployees: ${employeeNames}\n\nThis will end all current work sessions.`)) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      console.log('Force clocking out all employees:', activeSessions.length)
+      
+      // Clock out all sessions in parallel
+      const clockOutPromises = activeSessions.map(session => 
+        database.clockOut(session.id, 'Admin force clock-out all')
+      )
+      
+      const results = await Promise.allSettled(clockOutPromises)
+      
+      // Count successes and failures
+      const successes = results.filter(r => r.status === 'fulfilled' && !r.value?.error).length
+      const failures = results.filter(r => r.status === 'rejected' || r.value?.error).length
+      
+      console.log('Force clock-out all results:', { successes, failures, total: employeeCount })
+      
+      if (successes > 0) {
+        alert(`✅ Successfully clocked out ${successes} employee(s)${failures > 0 ? `\n⚠️ ${failures} failed` : ''}`)
+      } else {
+        alert(`❌ Failed to clock out employees. Please try individual clock-outs.`)
+      }
+      
+      // Refresh the admin dashboard
+      if (onRefresh) {
+        await onRefresh()
+      }
+    } catch (error) {
+      console.error('Error force clocking out all employees:', error)
+      alert(`❌ Error clocking out employees: ${error.message || 'Please try again.'}`)
+    }
+    setLoading(false)
   }
 
   return (
@@ -292,11 +369,33 @@ function DashboardTab({ activeSessions, employees, locations }) {
 
       {/* Active Sessions */}
       <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20">
-        <div className="flex items-center space-x-3 mb-8">
-          <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
-            ⏰
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
+              ⏰
+            </div>
+            <h3 className="text-2xl font-bold text-white">Currently Clocked In</h3>
           </div>
-          <h3 className="text-2xl font-bold text-white">Currently Clocked In</h3>
+          {activeSessions.length > 0 && (
+            <button
+              onClick={handleForceClockOutAll}
+              disabled={loading}
+              className="bg-red-600/20 hover:bg-red-600/30 text-red-300 hover:text-red-200 border border-red-600/30 hover:border-red-500 px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Force clock-out all employees"
+            >
+              {loading ? (
+                <span className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-red-300 border-t-transparent rounded-full animate-spin"></div>
+                  <span>Clocking Out All...</span>
+                </span>
+              ) : (
+                <span className="flex items-center space-x-2">
+                  <span>🚪</span>
+                  <span>Force Clock-Out All ({activeSessions.length})</span>
+                </span>
+              )}
+            </button>
+          )}
         </div>
         
         {activeSessions.length > 0 ? (
@@ -310,18 +409,38 @@ function DashboardTab({ activeSessions, employees, locations }) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                      {session.first_name[0]}{session.last_name[0]}
+                      {session.first_name?.[0] || '?'}{session.last_name?.[0] || '?'}
                     </div>
                     <div>
-                      <p className="font-bold text-xl text-white">{session.first_name} {session.last_name}</p>
-                      <p className="text-white/70 text-sm">📍 {session.location_name}</p>
+                      <p className="font-bold text-xl text-white">{session.first_name || 'Unknown'} {session.last_name || 'Employee'}</p>
+                      <p className="text-white/70 text-sm">📍 {session.location_name || 'No location'}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-mono text-2xl font-bold text-green-400">{formatDuration(session.clock_in)}</p>
-                    <p className="text-white/60 text-sm">
-                      Since {new Date(session.clock_in).toLocaleTimeString()}
-                    </p>
+                  <div className="flex items-center space-x-4">
+                    <div className="text-right">
+                      <p className="font-mono text-2xl font-bold text-green-400">{formatDuration(session.clock_in)}</p>
+                      <p className="text-white/60 text-sm">
+                        Since {new Date(session.clock_in).toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleForceClockOut(session)}
+                      disabled={loading}
+                      className="group bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-red-200 border border-red-500/30 hover:border-red-400 px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Force clock-out this employee"
+                    >
+                      {loading ? (
+                        <span className="flex items-center space-x-2">
+                          <div className="w-4 h-4 border-2 border-red-300 border-t-transparent rounded-full animate-spin"></div>
+                          <span>Clocking Out...</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center space-x-2">
+                          <span>🚪</span>
+                          <span>Force Clock-Out</span>
+                        </span>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>

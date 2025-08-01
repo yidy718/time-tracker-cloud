@@ -1552,10 +1552,14 @@ function ClockOutModal({ memo, onMemoChange, taskProgress, onTaskProgressChange,
           projectLocations={projectLocations}
           onLocationSelect={handleLocationSelection}
           onCancel={() => {
-            setShowLocationSelection(false)
-            setProjectLocations([])
-            setSelectedLocation('')
-            setLoading(false)
+            try {
+              setShowLocationSelection(false)
+              setProjectLocations([])
+              setSelectedLocation('')
+              setLoading(false)
+            } catch (error) {
+              console.error('Error in location modal cancel:', error)
+            }
           }}
           loading={loading}
         />
