@@ -438,7 +438,7 @@ export default function TimeTracker({ session, employee, organization }) {
                 <div className="min-w-0 flex-1">
                   <span className="text-white/90 font-semibold text-base sm:text-lg block truncate">{employee?.first_name || 'Unknown'} {employee?.last_name || 'Employee'}</span>
                   <div className="flex items-center space-x-2 mt-1">
-                    <span className="px-2 sm:px-3 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium truncate max-w-[150px]">{employee?.organization?.name || 'Unknown Organization'}</span>
+                    <span className="px-2 sm:px-3 py-1 bg-white/10 rounded-full text-xs text-white/80 font-medium truncate max-w-[150px]">{organization?.name || employee?.organization?.name || 'Unknown Organization'}</span>
                   </div>
                 </div>
               </div>
