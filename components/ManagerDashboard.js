@@ -226,7 +226,7 @@ export default function ManagerDashboard({ session, employee, organization }) {
               <div>
                 <h2 className="text-2xl font-bold text-white mb-2">Projects & Task Management</h2>
                 <p className="text-white/70">
-                  Manage your team's projects, assign tasks, and track progress
+                  Manage your team&apos;s projects, assign tasks, and track progress
                 </p>
               </div>
             </div>
