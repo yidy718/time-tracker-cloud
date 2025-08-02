@@ -168,6 +168,112 @@
   .container-app {
     @apply max-w-full rounded-none shadow-none;
   }
+  
+  /* Mobile-specific button sizes */
+  .btn {
+    @apply px-4 py-4 text-base;
+  }
+  
+  /* Larger touch targets */
+  .btn-mobile {
+    @apply min-h-[48px] text-lg;
+  }
+  
+  /* Mobile input improvements */
+  .input {
+    @apply px-4 py-4 text-base;
+  }
+  
+  /* Mobile card adjustments */
+  .card, .card-glass {
+    @apply p-4 rounded-xl;
+  }
+  
+  /* SMS OTP input styling for mobile */
+  .otp-input {
+    @apply text-center text-3xl tracking-widest py-6 text-gray-900 font-bold;
+  }
+  
+  /* Mobile dashboard optimizations */
+  .mobile-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-200 p-2;
+  }
+  
+  /* Mobile tab styling */
+  .mobile-tab {
+    @apply flex-1 py-3 px-2 text-xs text-center rounded-lg transition-all;
+  }
+  
+  /* Mobile header */
+  .mobile-header {
+    @apply sticky top-0 bg-white/95 backdrop-blur-xl border-b border-gray-200 z-40;
+  }
+  
+  /* Mobile safe areas */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Mobile modal adjustments */
+  .mobile-modal {
+    @apply max-h-[90vh] overflow-y-auto rounded-t-2xl rounded-b-none;
+  }
+  
+  /* Time display mobile optimization */
+  .time-display {
+    @apply text-3xl;
+  }
+  
+  /* Hide scrollbars on mobile for cleaner look */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .container-app {
+    @apply max-w-2xl;
+  }
+  
+  /* Tablet grid adjustments */
+  .tablet-grid {
+    @apply grid-cols-2 gap-4;
+  }
+}
+
+/* Large screen optimizations */
+@media (min-width: 1025px) {
+  .desktop-grid {
+    @apply grid-cols-3 gap-6;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  .btn:hover {
+    transform: none;
+  }
+  
+  /* Larger touch targets */
+  button, .btn, input, select {
+    @apply min-h-[44px];
+  }
+  
+  /* Better touch feedback */
+  .touch-feedback:active {
+    @apply bg-gray-100 scale-95;
+  }
 }
 
 /* Print styles */

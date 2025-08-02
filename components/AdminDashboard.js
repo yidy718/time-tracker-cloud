@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { database, auth } from '../lib/supabase'
 import ReportsTab from './ReportsTab'
 import TaskManagement from './TaskManagement'
+import PhoneNumberManager from './PhoneNumberManager'
 
 export default function AdminDashboard({ session, employee, organization }) {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -144,6 +145,7 @@ export default function AdminDashboard({ session, employee, organization }) {
               { id: 'tasks', name: 'Tasks', emoji: '📋', color: 'from-teal-500 to-green-600' },
               { id: 'timemanagement', name: 'Time Mgmt', emoji: '⏰', color: 'from-red-500 to-orange-600' },
               { id: 'employees', name: 'Employees', emoji: '👥', color: 'from-orange-500 to-red-600' },
+              { id: 'phones', name: 'SMS Setup', emoji: '📱', color: 'from-pink-500 to-purple-600' },
               { id: 'locations', name: 'Locations', emoji: '📍', color: 'from-green-500 to-blue-600' },
               { id: 'projects', name: 'Projects', emoji: '💼', color: 'from-indigo-500 to-purple-600' },
             ].map((tab) => (
@@ -201,6 +203,10 @@ export default function AdminDashboard({ session, employee, organization }) {
             onEmployeesChange={loadData}
             organizationId={employee.organization_id}
           />
+        )}
+
+        {activeTab === 'phones' && (
+          <PhoneNumberManager organizationId={employee.organization_id} />
         )}
         
         {activeTab === 'locations' && (

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { auth, database, supabase } from '../lib/supabase'
+import SMSAuth from './SMSAuth'
 
 export default function Auth() {
   const [loading, setLoading] = useState(false)
@@ -8,7 +9,7 @@ export default function Auth() {
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [message, setMessage] = useState('')
-  const [loginType, setLoginType] = useState('admin') // 'admin' or 'employee'
+  const [loginType, setLoginType] = useState('admin') // 'admin', 'employee', or 'sms'
 
   const handleAuth = async (e) => {
     e.preventDefault()
@@ -67,6 +68,42 @@ export default function Auth() {
     setLoading(false)
   }
 
+  const handleSMSSuccess = async (sessionData) => {
+    // SMS authentication successful, session is already stored in localStorage
+    console.log('🎉 SMS authentication successful, clearing Supabase auth and reloading')
+    
+    // Important: Sign out any temporary Supabase auth user created during SMS verification
+    // This prevents the main app from trying to use the temporary Supabase user
+    try {
+      await supabase.auth.signOut()
+      console.log('✅ Cleared temporary Supabase auth user')
+    } catch (error) {
+      console.log('⚠️ Error clearing Supabase auth (may not have been signed in):', error)
+    }
+    
+    // Small delay then reload to trigger employee session check
+    setTimeout(() => window.location.reload(), 200)
+  }
+
+  const handleBackToLogin = () => {
+    setLoginType('admin')
+    setMessage('')
+  }
+
+  // Show SMS auth interface
+  if (loginType === 'sms') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="card-glass max-w-md w-full">
+          <SMSAuth 
+            onSuccess={handleSMSSuccess}
+            onBack={handleBackToLogin}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="card-glass max-w-md w-full">
@@ -78,11 +115,11 @@ export default function Auth() {
 
         <form onSubmit={handleAuth} className="space-y-6">
           {/* Login Type Selector */}
-          <div className="flex space-x-2 p-1 bg-gray-100 rounded-lg">
+          <div className="grid grid-cols-3 gap-1 p-1 bg-gray-100 rounded-lg">
             <button
               type="button"
               onClick={() => setLoginType('admin')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+              className={`py-2 px-3 rounded-md text-xs font-medium transition-all ${
                 loginType === 'admin'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
@@ -93,13 +130,24 @@ export default function Auth() {
             <button
               type="button"
               onClick={() => setLoginType('employee')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+              className={`py-2 px-3 rounded-md text-xs font-medium transition-all ${
                 loginType === 'employee'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               👷 Employee
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginType('sms')}
+              className={`py-2 px-3 rounded-md text-xs font-medium transition-all ${
+                loginType === 'sms'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              📱 SMS/Link
             </button>
           </div>
 

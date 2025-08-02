@@ -82,6 +82,7 @@ export default function Home({ session }) {
     if (employeeSessionData) {
       try {
         const employeeSession = JSON.parse(employeeSessionData)
+        console.log('📱 SMS Auth Debug - employeeSession:', employeeSession)
         
         // Check if this is enhanced authentication data with organizations
         if (employeeSession.employee && employeeSession.employee.organizations) {
@@ -134,10 +135,13 @@ export default function Home({ session }) {
             setOrganization(orgData)
           }
         } else {
-          // Legacy employee session format - backwards compatibility
-          setEmployee(employeeSession.employee)
-          if (employeeSession.employee?.organization_id) {
-            const { data: orgData } = await database.getOrganization(employeeSession.employee.organization_id)
+          // Legacy employee session format or SMS authentication format - backwards compatibility
+          const employeeData = employeeSession.employee || employeeSession
+          console.log('📱 SMS Auth Debug - employeeData:', employeeData)
+          console.log('📱 SMS Auth Debug - setting employee to:', employeeData)
+          setEmployee(employeeData)
+          if (employeeData?.organization_id) {
+            const { data: orgData } = await database.getOrganization(employeeData.organization_id)
             setOrganization(orgData)
           }
         }
