@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Switch, StatusBar } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { LinearGradient } from 'expo-linear-gradient'
 import { supabase, database } from '../lib/supabase'
 
 export default function LoginScreen({ onEmployeeLogin }) {
@@ -87,11 +86,7 @@ export default function LoginScreen({ onEmployeeLogin }) {
   }
 
   return (
-    <LinearGradient
-      colors={['#0f172a', '#1e293b', '#0f172a']}
-      style={styles.container}
-    >
-      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+    <View style={styles.container}>
       <View style={styles.logoContainer}>
         <Text style={styles.emoji}>⏰</Text>
         <Text style={styles.title}>Time Tracker</Text>
@@ -99,10 +94,7 @@ export default function LoginScreen({ onEmployeeLogin }) {
       </View>
 
       {/* Login Mode Toggle */}
-      <LinearGradient
-        colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-        style={styles.modeContainer}
-      >
+      <View style={styles.modeContainer}>
         <Text style={styles.modeLabel}>Employee</Text>
         <Switch
           value={isAdminMode}
@@ -111,12 +103,9 @@ export default function LoginScreen({ onEmployeeLogin }) {
           thumbColor={isAdminMode ? '#ffffff' : '#ffffff'}
         />
         <Text style={styles.modeLabel}>Admin/Manager</Text>
-      </LinearGradient>
+      </View>
 
-      <LinearGradient
-        colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-        style={styles.modeIndicator}
-      >
+      <View style={styles.modeIndicator}>
         <Text style={styles.modeText}>
           {isAdminMode ? '👨‍💼 Admin/Manager Login' : '👷‍♂️ Employee Login'}
         </Text>
@@ -126,7 +115,7 @@ export default function LoginScreen({ onEmployeeLogin }) {
             : 'Use your employee username and password'
           }
         </Text>
-      </LinearGradient>
+      </View>
       
       <TextInput
         style={styles.input}
@@ -152,25 +141,17 @@ export default function LoginScreen({ onEmployeeLogin }) {
       />
       
       <TouchableOpacity 
-        style={styles.button} 
+        style={[styles.button, isAdminMode ? styles.adminButton : styles.employeeButton]} 
         onPress={handleLogin}
         disabled={loading}
       >
-        <LinearGradient
-          colors={isAdminMode ? ['#059669', '#047857'] : ['#3b82f6', '#2563eb']}
-          style={styles.buttonGradient}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? '⏳ Signing In...' : 'Sign In'}
-          </Text>
-        </LinearGradient>
+        <Text style={styles.buttonText}>
+          {loading ? 'Signing In...' : 'Sign In'}
+        </Text>
       </TouchableOpacity>
 
       {/* Login Instructions */}
-      <LinearGradient
-        colors={['rgba(59, 130, 246, 0.15)', 'rgba(37, 99, 235, 0.1)']}
-        style={styles.instructionsContainer}
-      >
+      <View style={styles.instructionsContainer}>
         <Text style={styles.instructionsTitle}>🔐 Login Help:</Text>
         <Text style={styles.instructionsText}>
           • <Text style={styles.bold}>Employees:</Text> Use your username (e.g., "john.doe") and employee password
@@ -178,8 +159,8 @@ export default function LoginScreen({ onEmployeeLogin }) {
         <Text style={styles.instructionsText}>
           • <Text style={styles.bold}>Admins/Managers:</Text> Use your email and admin password
         </Text>
-      </LinearGradient>
-    </LinearGradient>
+      </View>
+    </View>
   )
 }
 
@@ -188,23 +169,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
+    backgroundColor: '#f8fafc',
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 40,
   },
   emoji: {
-    fontSize: 80,
-    marginBottom: 16,
-    textShadowColor: 'rgba(255, 255, 255, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
-    marginTop: 5,
+    fontSize: 64,
+    marginBottom: 10,
   },
   title: {
     fontSize: 36,
@@ -216,50 +189,10 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-  input: {
-    backgroundColor: 'white',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginBottom: 20,
+  subtitle: {
     fontSize: 16,
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-    color: '#1e293b',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  button: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
-    marginTop: 10,
-    marginBottom: 30,
-  },
-  employeeButton: {
-    backgroundColor: '#3b82f6',
-  },
-  adminButton: {
-    backgroundColor: '#059669',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: '#64748b',
+    textAlign: 'center',
   },
   modeContainer: {
     flexDirection: 'row',
@@ -303,6 +236,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
     textAlign: 'center',
+  },
+  input: {
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    fontSize: 16,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    color: '#1e293b',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  button: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+    marginTop: 10,
+    marginBottom: 30,
+  },
+  employeeButton: {
+    backgroundColor: '#3b82f6',
+  },
+  adminButton: {
+    backgroundColor: '#059669',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   instructionsContainer: {
     backgroundColor: '#eff6ff',

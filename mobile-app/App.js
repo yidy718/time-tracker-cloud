@@ -16,17 +16,37 @@ export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [employee, setEmployee] = useState(null)
+  const [adminUser, setAdminUser] = useState(null)
   const navigationRef = useRef()
 
   useEffect(() => {
     // Check for existing employee session
     checkEmployeeSession()
     
+    // Check for Supabase admin session
+    checkAdminSession()
+    
     // Initialize push notifications if employee is logged in
     if (employee) {
       initializePushNotifications()
     }
   }, [employee])
+
+  useEffect(() => {
+    // Listen for Supabase auth changes (admin users)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Supabase auth state changed:', _event, session?.user?.email)
+      if (session) {
+        setAdminUser(session.user)
+        setEmployee(null) // Clear employee session if admin logged in
+      } else {
+        setAdminUser(null)
+      }
+      setLoading(false)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   const checkEmployeeSession = async () => {
     try {

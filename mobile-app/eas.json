@@ -11,16 +11,24 @@
         "simulator": true
       },
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "env": {
+        "EXPO_SKIP_LEGACY_NODE_MODULE_RESOLUTION": "1"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
       },
       "ios": {
         "simulator": false
+      },
+      "env": {
+        "EXPO_SKIP_LEGACY_NODE_MODULE_RESOLUTION": "1"
       }
     },
     "production": {
@@ -29,7 +37,18 @@
         "simulator": false
       },
       "android": {
-        "buildType": "aab"
+        "buildType": "aab",
+        "gradleCommand": ":app:bundleRelease"
+      },
+      "env": {
+        "EXPO_SKIP_LEGACY_NODE_MODULE_RESOLUTION": "1"
+      }
+    },
+    "production-apk": {
+      "extends": "production",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
       }
     }
   },
@@ -41,6 +60,7 @@
         "appleTeamId": "PLACEHOLDER_APPLE_TEAM_ID"
       },
       "android": {
+        "serviceAccountKeyPath": "./android-service-account.json",
         "track": "internal"
       }
     }

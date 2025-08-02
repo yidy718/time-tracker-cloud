@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,37 +14,21 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.timetracker.cloud",
-      "buildNumber": "1.0.0",
-      "config": {
-        "usesNonExemptEncryption": false
-      }
+      "buildNumber": "1.0.0"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.timetracker.cloud"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#ffffff",
-          "defaultChannel": "default"
-        }
-      ]
+      "expo-secure-store"
     ],
-    "notification": {
-      "icon": "./assets/notification-icon.png",
-      "color": "#1e40af"
-    },
     "extra": {
       "eas": {
         "projectId": "e759db79-58dc-41e3-adcb-6f2b3fc407d5"
