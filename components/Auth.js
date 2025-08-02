@@ -136,14 +136,14 @@ export default function Auth() {
             </button>
             <button
               type="button"
-              onClick={() => setLoginType('sms')}
+              onClick={() => setLoginType('multi_auth')}
               className={`py-2 px-3 rounded-md text-xs font-medium transition-all ${
-                loginType === 'sms'
+                loginType === 'multi_auth'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              📱 SMS/Link
+              🔐 Multi-Auth
             </button>
           </div>
 

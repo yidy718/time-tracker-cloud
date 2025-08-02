@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import SMSAuth from './SMSAuth'
+import MagicLinkAuth from './MagicLinkAuth'
 
 export default function AuthMethodSelector({ onSuccess, onBack }) {
   const [selectedMethod, setSelectedMethod] = useState(null)
@@ -127,10 +128,7 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
           )}
           
           {selectedMethod === 'email' && (
-            <div className="text-center text-white/80 py-8">
-              <div className="text-4xl mb-4">🚧</div>
-              <p>Enhanced Magic Link interface coming next!</p>
-            </div>
+            <MagicLinkAuth onSuccess={handleAuthSuccess} onBack={handleBackToMethods} />
           )}
 
           {/* Add other method components here as they're implemented */}
