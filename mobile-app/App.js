@@ -7,6 +7,7 @@ import { supabase } from './lib/supabase'
 import { PushNotificationService } from './lib/pushNotifications'
 import LoginScreen from './screens/LoginScreen'
 import TimeTrackingScreen from './screens/TimeTrackingScreen'
+import EmployeeDashboard from './screens/EmployeeDashboard'
 import AuthApprovalScreen from './screens/AuthApprovalScreen'
 
 const Stack = createStackNavigator()
@@ -91,11 +92,11 @@ export default function App() {
         {employee ? (
           <>
             <Stack.Screen 
-              name="TimeTracking" 
+              name="Dashboard" 
               options={{ title: 'Time Tracker' }}
             >
               {(props) => (
-                <TimeTrackingScreen 
+                <EmployeeDashboard 
                   {...props} 
                   employee={employee} 
                   onLogout={handleEmployeeLogout}
