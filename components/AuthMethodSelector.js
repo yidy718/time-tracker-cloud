@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import SMSAuth from './SMSAuth'
 import MagicLinkAuth from './MagicLinkAuth'
+import QRCodeAuth from './QRCodeAuth'
 
 export default function AuthMethodSelector({ onSuccess, onBack }) {
   const [selectedMethod, setSelectedMethod] = useState(null)
@@ -54,7 +55,7 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
       icon: '📷',
       description: 'Scan QR code with your phone',
       cost: 'Free',
-      status: 'coming_soon',
+      status: 'active',
       color: 'purple'
     },
     {
@@ -129,6 +130,10 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
           
           {selectedMethod === 'email' && (
             <MagicLinkAuth onSuccess={handleAuthSuccess} onBack={handleBackToMethods} />
+          )}
+          
+          {selectedMethod === 'qr' && (
+            <QRCodeAuth onSuccess={handleAuthSuccess} onBack={handleBackToMethods} />
           )}
 
           {/* Add other method components here as they're implemented */}
