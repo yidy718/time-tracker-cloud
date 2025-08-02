@@ -208,9 +208,9 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
-      <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-8 max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] shadow-2xl border border-white/20 overflow-hidden flex flex-col">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl max-w-6xl w-full h-[95vh] sm:h-[90vh] shadow-2xl border border-white/20 flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center mb-4 sm:mb-8 flex-shrink-0">
+        <div className="flex justify-between items-center p-4 sm:p-8 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-green-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg">
               📋
@@ -285,7 +285,7 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
         </div>
 
         {/* Tasks List */}
-        <div className="flex-1 overflow-y-auto min-h-0 -webkit-overflow-scrolling-touch">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 scrollbar-hide">
           {filteredTasks.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 pb-4">
               {filteredTasks.map(task => {
@@ -293,10 +293,17 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
                 const isAvailable = !isAssigned && availableTasks.find(t => t.id === task.id)
                 
                 return (
-                  <div 
+                  <button 
                     key={task.id} 
-                    className="bg-white p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer touch-manipulation"
+                    className="w-full bg-white p-4 rounded-lg border border-gray-200 hover:border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 text-left touch-manipulation"
                     onClick={() => setSelectedTask(task)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setSelectedTask(task)
+                      }
+                    }}
+                    aria-label={`View details for task: ${task.title}, Status: ${task.status}, Progress: ${task.progress_percentage || 0}%`}
                     style={{ WebkitTapHighlightColor: 'rgba(20, 184, 166, 0.1)' }}
                   >
                     <div className="flex justify-between items-start mb-3">
@@ -434,7 +441,7 @@ export default function EmployeeTaskDashboard({ employee, onClose }) {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 )
               })}
             </div>

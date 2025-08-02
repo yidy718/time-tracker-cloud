@@ -159,7 +159,7 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
                         }}
                         className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
                       >
-                        <span className="text-lg">🔑</span>
+                        <span className="text-lg" aria-hidden="true">🔑</span>
                         <span className="font-medium text-gray-700">Change Password</span>
                       </button>
                       {hasMultipleCompanies && (
@@ -170,7 +170,7 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
                           }}
                           className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
                         >
-                          <span className="text-lg">🏢</span>
+                          <span className="text-lg" aria-hidden="true">🏢</span>
                           <span className="font-medium text-gray-700">Switch Company</span>
                         </button>
                       )}
@@ -182,7 +182,7 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
                         }}
                         className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-50 transition-colors text-left mt-2"
                       >
-                        <span className="text-lg">🚪</span>
+                        <span className="text-lg" aria-hidden="true">🚪</span>
                         <span className="font-medium text-red-600">Sign Out</span>
                       </button>
                     </div>
@@ -210,30 +210,30 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
               className={`px-6 py-4 font-medium text-sm transition-all duration-200 rounded-t-lg ${
                 activeTab === 'overview'
                   ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
+                  : 'text-slate-200 hover:text-white hover:bg-white/10'
               }`}
             >
-              🏠 Overview
+<span aria-hidden="true">🏠</span> Overview
             </button>
             <button
               onClick={() => setActiveTab('tasks')}
               className={`px-6 py-4 font-medium text-sm transition-all duration-200 rounded-t-lg ${
                 activeTab === 'tasks'
                   ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
+                  : 'text-slate-200 hover:text-white hover:bg-white/10'
               }`}
             >
-              ✅ My Tasks
+<span aria-hidden="true">✅</span> My Tasks
             </button>
             <button
               onClick={() => setActiveTab('activity')}
               className={`px-6 py-4 font-medium text-sm transition-all duration-200 rounded-t-lg ${
                 activeTab === 'activity'
                   ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
+                  : 'text-slate-200 hover:text-white hover:bg-white/10'
               }`}
             >
-              📝 Log Activity
+<span aria-hidden="true">📝</span> Log Activity
             </button>
             {expensesEnabled && (
               <button
@@ -241,10 +241,10 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
                 className={`px-6 py-4 font-medium text-sm transition-all duration-200 rounded-t-lg ${
                   activeTab === 'expenses'
                     ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                    : 'text-slate-200 hover:text-white hover:bg-white/10'
                 }`}
               >
-                💰 Expenses
+<span aria-hidden="true">💰</span> Expenses
               </button>
             )}
           </div>
@@ -256,9 +256,9 @@ export default function NonClockWorkerDashboard({ session, employee, organizatio
         {activeTab === 'overview' && (
           <div>
             <div className="mb-6 text-center">
-              <div className="text-4xl mb-3">👋</div>
+              <div className="text-4xl mb-3" aria-hidden="true">👋</div>
               <h2 className="text-2xl font-bold text-white">Welcome Back, {employee.first_name}!</h2>
-              <p className="text-white/70 mt-1">
+              <p className="text-slate-200 mt-1">
                 Manage your tasks and activities. No time tracking required.
               </p>
             </div>

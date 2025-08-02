@@ -155,13 +155,13 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
         <div className="text-center mb-8">
           <div className="text-6xl mb-4 animate-pulse-slow">🔐</div>
           <h1 className="text-3xl font-bold text-white mb-2">Choose Login Method</h1>
-          <p className="text-white/70">
+          <p className="text-slate-200">
             Select your preferred way to authenticate
           </p>
         </div>
 
         {/* Method Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mb-8">
           {authMethods.map((method) => (
             <button
               key={method.id}
@@ -183,9 +183,9 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
               )}
 
               <div className="text-center">
-                <div className="text-4xl mb-3">{method.icon}</div>
+                <div className="text-4xl mb-3" aria-hidden="true">{method.icon}</div>
                 <h3 className="text-lg font-semibold text-white mb-2">{method.name}</h3>
-                <p className="text-white/70 text-sm mb-3">{method.description}</p>
+                <p className="text-slate-200 text-sm mb-3">{method.description}</p>
                 <div className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
                   method.cost === 'Free' 
                     ? 'bg-green-500/20 text-green-300' 
