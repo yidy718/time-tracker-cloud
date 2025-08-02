@@ -2,6 +2,7 @@ import { useState } from 'react'
 import SMSAuth from './SMSAuth'
 import MagicLinkAuth from './MagicLinkAuth'
 import QRCodeAuth from './QRCodeAuth'
+import WhatsAppAuth from './WhatsAppAuth'
 
 export default function AuthMethodSelector({ onSuccess, onBack }) {
   const [selectedMethod, setSelectedMethod] = useState(null)
@@ -46,7 +47,7 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
       icon: '💚',
       description: 'Get a code via WhatsApp message',
       cost: '50% cheaper than SMS',
-      status: 'coming_soon',
+      status: 'active',
       color: 'emerald'
     },
     {
@@ -134,6 +135,10 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
           
           {selectedMethod === 'qr' && (
             <QRCodeAuth onSuccess={handleAuthSuccess} onBack={handleBackToMethods} />
+          )}
+          
+          {selectedMethod === 'whatsapp' && (
+            <WhatsAppAuth onSuccess={handleAuthSuccess} onBack={handleBackToMethods} />
           )}
 
           {/* Add other method components here as they're implemented */}
