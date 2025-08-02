@@ -8,6 +8,7 @@ import { PushNotificationService } from './lib/pushNotifications'
 import LoginScreen from './screens/LoginScreen'
 import TimeTrackingScreen from './screens/TimeTrackingScreen'
 import EmployeeDashboard from './screens/EmployeeDashboard'
+import AdminDashboard from './screens/AdminDashboard'
 import AuthApprovalScreen from './screens/AuthApprovalScreen'
 
 const Stack = createStackNavigator()
@@ -62,6 +63,19 @@ export default function App() {
     setLoading(false)
   }
 
+  const checkAdminSession = async () => {
+    try {
+      // Check for existing Supabase auth session
+      const { data: { session }, error } = await supabase.auth.getSession()
+      if (session) {
+        console.log('Found existing admin session:', session.user.email)
+        setAdminUser(session.user)
+      }
+    } catch (error) {
+      console.error('Error checking admin session:', error)
+    }
+  }
+
   const initializePushNotifications = async () => {
     if (!employee) return
 
@@ -86,6 +100,15 @@ export default function App() {
   const handleEmployeeLogout = () => {
     setEmployee(null)
     PushNotificationService.cleanup()
+  }
+
+  const handleAdminLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      setAdminUser(null)
+    } catch (error) {
+      console.error('Admin logout error:', error)
+    }
   }
 
   if (loading) {
@@ -131,6 +154,21 @@ export default function App() {
                 presentation: 'modal'
               }}
             />
+          </>
+        ) : adminUser ? (
+          <>
+            <Stack.Screen 
+              name="AdminDashboard" 
+              options={{ title: 'Admin Dashboard' }}
+            >
+              {(props) => (
+                <AdminDashboard 
+                  {...props} 
+                  user={adminUser} 
+                  onLogout={handleAdminLogout}
+                />
+              )}
+            </Stack.Screen>
           </>
         ) : (
           <Stack.Screen 

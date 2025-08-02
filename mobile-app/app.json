@@ -43,7 +43,7 @@
       ]
     ],
     "notification": {
-      "icon": "./assets/notification-icon.png",
+      "icon": "./assets/icon.png",
       "color": "#1e40af"
     },
     "extra": {
