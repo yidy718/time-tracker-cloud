@@ -28,7 +28,6 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
       name: 'SMS Code',
       icon: '📱',
       description: 'Get a 6-digit code via text message',
-      cost: 'Standard SMS rates',
       status: 'active',
       color: 'blue'
     },
@@ -37,7 +36,6 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
       name: 'Magic Link',
       icon: '✉️',
       description: 'Get a login link in your email',
-      cost: 'Free',
       status: 'active',
       color: 'green'
     },
@@ -46,8 +44,7 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
       name: 'WhatsApp',
       icon: '💚',
       description: 'Get a code via WhatsApp message',
-      cost: '50% cheaper than SMS',
-      status: 'active',
+      status: 'coming_soon',
       color: 'emerald'
     },
     {
@@ -55,7 +52,6 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
       name: 'QR Code',
       icon: '📷',
       description: 'Scan QR code with your phone',
-      cost: 'Free',
       status: 'active',
       color: 'purple'
     },
@@ -64,7 +60,6 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
       name: 'Push Notification',
       icon: '🔔',
       description: 'Approve login on your mobile app',
-      cost: 'Free',
       status: 'coming_soon',
       color: 'orange'
     },
@@ -73,7 +68,6 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
       name: 'Authenticator',
       icon: '🔐',
       description: 'Use Google Authenticator or similar',
-      cost: 'Free',
       status: 'coming_soon',
       color: 'gray'
     }
@@ -171,7 +165,7 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
                 relative p-6 rounded-xl border transition-all duration-200
                 ${method.status === 'active' 
                   ? getMethodStyles(method.color)
-                  : 'border-gray-600 bg-gray-800/50 opacity-60 cursor-not-allowed'
+                  : 'border-gray-400 bg-gray-700/70 opacity-75 cursor-not-allowed'
                 }
               `}
             >
@@ -186,15 +180,6 @@ export default function AuthMethodSelector({ onSuccess, onBack }) {
                 <div className="text-4xl mb-3" aria-hidden="true">{method.icon}</div>
                 <h3 className="text-lg font-semibold text-white mb-2">{method.name}</h3>
                 <p className="text-slate-200 text-sm mb-3">{method.description}</p>
-                <div className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                  method.cost === 'Free' 
-                    ? 'bg-green-500/20 text-green-300' 
-                    : method.cost.includes('cheaper')
-                    ? 'bg-blue-500/20 text-blue-300'
-                    : 'bg-gray-500/20 text-gray-300'
-                }`}>
-                  {method.cost}
-                </div>
               </div>
             </button>
           ))}
