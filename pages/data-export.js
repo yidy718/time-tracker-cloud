@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 import AdminDataManager from '../components/AdminDataManager'
 import DatabaseExplorer from '../components/DatabaseExplorer'
@@ -42,9 +43,9 @@ export default function DataExportPage() {
         <div className="card-glass max-w-md w-full text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Authentication Required</h1>
           <p className="text-gray-600 mb-6">Please log in to access the data exporter.</p>
-          <a href="/" className="btn-primary">
+          <Link href="/" className="btn-primary">
             Go to Login
-          </a>
+          </Link>
         </div>
       </div>
     )

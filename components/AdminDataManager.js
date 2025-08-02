@@ -314,7 +314,7 @@ export default function AdminDataManager() {
                       <span className="text-gray-500 ml-2">({emp.email})</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className="text-red-600 font-mono text-sm">"{emp.phone}"</span>
+                      <span className="text-red-600 font-mono text-sm">&quot;{emp.phone}&quot;</span>
                       <QuickPhoneUpdate 
                         employee={emp} 
                         onUpdate={updateEmployeePhone}

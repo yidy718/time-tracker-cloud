@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { auth, database, supabase } from '../lib/supabase'
-import SMSAuth from './SMSAuth'
+import AuthMethodSelector from './AuthMethodSelector'
 
 export default function Auth() {
   const [loading, setLoading] = useState(false)
@@ -9,7 +9,7 @@ export default function Auth() {
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [message, setMessage] = useState('')
-  const [loginType, setLoginType] = useState('admin') // 'admin', 'employee', or 'sms'
+  const [loginType, setLoginType] = useState('admin') // 'admin', 'employee', or 'multi_auth'
 
   const handleAuth = async (e) => {
     e.preventDefault()
@@ -68,11 +68,11 @@ export default function Auth() {
     setLoading(false)
   }
 
-  const handleSMSSuccess = async (sessionData) => {
-    // SMS authentication successful, session is already stored in localStorage
-    console.log('🎉 SMS authentication successful, clearing Supabase auth and reloading')
+  const handleMultiAuthSuccess = async (sessionData) => {
+    // Multi-method authentication successful, session is already stored in localStorage
+    console.log('🎉 Authentication successful, clearing Supabase auth and reloading')
     
-    // Important: Sign out any temporary Supabase auth user created during SMS verification
+    // Important: Sign out any temporary Supabase auth user created during authentication
     // This prevents the main app from trying to use the temporary Supabase user
     try {
       await supabase.auth.signOut()
@@ -90,17 +90,13 @@ export default function Auth() {
     setMessage('')
   }
 
-  // Show SMS auth interface
-  if (loginType === 'sms') {
+  // Show multi-method auth interface
+  if (loginType === 'multi_auth') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="card-glass max-w-md w-full">
-          <SMSAuth 
-            onSuccess={handleSMSSuccess}
-            onBack={handleBackToLogin}
-          />
-        </div>
-      </div>
+      <AuthMethodSelector 
+        onSuccess={handleMultiAuthSuccess}
+        onBack={handleBackToLogin}
+      />
     )
   }
 

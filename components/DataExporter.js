@@ -171,7 +171,7 @@ export default function DataExporter() {
                 {data.phoneAnalysis.invalidPhone.map(emp => (
                   <div key={emp.id} className="flex justify-between items-center text-sm">
                     <span className="font-medium">{emp.first_name} {emp.last_name}</span>
-                    <span className="text-red-600 font-mono">"{emp.phone}"</span>
+                    <span className="text-red-600 font-mono">&quot;{emp.phone}&quot;</span>
                   </div>
                 ))}
               </div>
